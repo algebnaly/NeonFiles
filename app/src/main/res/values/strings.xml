@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">NeonFiles</string>
+    <string name="copy_operation_name">copy</string>
+    <string name="cut_operation_name">cut</string>
+    <string name="delete_operation_name">delete</string>
+    <string name="rename_operation_name">rename</string>
+    <string name="more_operation_name">more</string>
+</resources>
