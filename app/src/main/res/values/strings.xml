@@ -1,9 +1,10 @@
 <resources>
     <string name="app_name">NeonFiles</string>
-    <string name="copy_operation_name">copy</string>
-    <string name="cut_operation_name">cut</string>
-    <string name="delete_operation_name">delete</string>
-    <string name="rename_operation_name">rename</string>
-    <string name="more_operation_name">more</string>
-    <string name="cancel_operation_name">cancel</string>
+    <string name="copy_operation_name">Copy</string>
+    <string name="cut_operation_name">Cut</string>
+    <string name="delete_operation_name">Delete</string>
+    <string name="rename_operation_name">Rename</string>
+    <string name="more_operation_name">More</string>
+    <string name="cancel_operation_name">Cancel</string>
+    <string name="copy_complete_name">Copy completed</string>
 </resources>

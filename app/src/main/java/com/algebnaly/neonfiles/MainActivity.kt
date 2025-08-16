@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -24,7 +25,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.DrawerState
@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -61,6 +62,7 @@ import com.algebnaly.neonfiles.ui.components.EmptyFolder
 import com.algebnaly.neonfiles.ui.components.FileView
 import com.algebnaly.neonfiles.ui.components.SelectMenuView
 import com.algebnaly.neonfiles.ui.components.SelectableFileView
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 
 
@@ -154,52 +156,57 @@ fun MainTopAppBar(scope: CoroutineScope, drawerState: DrawerState) {
 fun FileListView(viewState: MainViewModel = viewModel()) {
     val operationMode by viewState.operationMode.collectAsState()
     val currentPath by viewState.currentPath.collectAsState()
+    val context = LocalContext.current
+
     val itemsList = currentPath.listFiles() ?: emptyArray()
     val bottomMenuHeight = 56.dp
 
     val lazyColumnBottomPadding =
         if (operationMode != OperationMode.Browser) bottomMenuHeight + 12.dp else 12.dp
 
-    val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        viewState.toastMessageEvent.collectLatest { message ->
+            message?.let {
+                Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
-    if (itemsList.isNotEmpty()) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Box() {
-                LazyColumn(
-                    contentPadding = PaddingValues(
-                        bottom = lazyColumnBottomPadding
-                    ),
-                ) {
-                    items(itemsList) { item ->
-                        if (operationMode == OperationMode.Select)
-                            SelectModeFileItemCard(item)
-                        else {
-                            ListItemCard(item = item)
-                        }
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (itemsList.isNotEmpty()) {
+            LazyColumn(
+                contentPadding = PaddingValues(
+                    bottom = lazyColumnBottomPadding
+                ),
+            ) {
+                items(itemsList) { item ->
+                    if (operationMode == OperationMode.Select)
+                        SelectModeFileItemCard(item)
+                    else {
+                        ListItemCard(item = item)
                     }
                 }
             }
-            AnimatedVisibility(
-                visible = operationMode != OperationMode.Browser,
-                enter = fadeIn(animationSpec = tween(150)),
-                exit = fadeOut(animationSpec = tween(0)),
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .height(bottomMenuHeight)
-            ) {
-                if (operationMode == OperationMode.Select) {
-                    SelectMenuView()
-                } else if (operationMode == OperationMode.Copy) {
-                    CopyMenuView()
-                }
-
-            }
+        } else {
+            EmptyFolder()
         }
-    } else {
-        EmptyFolder()
+        AnimatedVisibility(
+            visible = operationMode != OperationMode.Browser,
+            enter = fadeIn(animationSpec = tween(150)),
+            exit = fadeOut(animationSpec = tween(0)),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .height(bottomMenuHeight)
+        ) {
+            if (operationMode == OperationMode.Select) {
+                SelectMenuView()
+            } else if (operationMode == OperationMode.Copy) {
+                CopyMenuView()
+            }
+
+        }
     }
 }
 
