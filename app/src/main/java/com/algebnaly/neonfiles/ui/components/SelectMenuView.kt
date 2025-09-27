@@ -26,7 +26,7 @@ import com.algebnaly.neonfiles.ui.MainViewModel
 import com.algebnaly.neonfiles.ui.OperationMode
 
 @Composable
-fun SelectMenuView(viewModel: MainViewModel = viewModel()) {
+fun SelectMenuView(viewModel: MainViewModel) {
     val copy_operation_name = stringResource(R.string.copy_operation_name)
     val cut_operation_name = stringResource(R.string.cut_operation_name)
     val delete_operation_name = stringResource(R.string.delete_operation_name)
@@ -63,7 +63,10 @@ fun SelectMenuView(viewModel: MainViewModel = viewModel()) {
                 .weight(1f)
                 .fillMaxSize()
                 .clickable {
-                    Toast.makeText(context, "not implemented", Toast.LENGTH_SHORT).show()
+                    viewModel.fileOperationManager.doDelete(viewModel.selectedPathSet.value)
+                    viewModel.selectedPathSet.value = emptySet()
+                    viewModel.operationMode.value = OperationMode.Browser
+
                 }
         )
         BottomMenuItem(

@@ -7,4 +7,9 @@
     <string name="more_operation_name">More</string>
     <string name="cancel_operation_name">Cancel</string>
     <string name="copy_complete_name">Copy completed</string>
+    <string name="export_path_name">Path</string>
+    <string name="location_item_name">Name</string>
+    <string name="save_button_name">Save</string>
+    <string name="server_address_name">server address</string>
+    <string name="cancel_button_name">Cancel</string>
 </resources>

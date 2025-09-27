@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "NeonFiles"
 include(":app")
+includeBuild("../../kotlin/nfs4c")

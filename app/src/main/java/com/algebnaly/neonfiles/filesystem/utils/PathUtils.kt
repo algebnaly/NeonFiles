@@ -1,8 +1,11 @@
 package com.algebnaly.neonfiles.filesystem.utils
-import android.os.Environment
-import java.io.File
 
+import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.nio.file.attribute.BasicFileAttributes
 
-fun getExternalRootPath(): File {
-    return Environment.getExternalStorageDirectory()
-}
+fun Path.isDirectorySafe(): Boolean =
+    this.fileSystem.provider().readAttributes<BasicFileAttributes>(
+        this,
+        BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS
+    ).isDirectory
