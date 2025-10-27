@@ -45,7 +45,7 @@ fun FileView(file: Path) {
         val mime = getMimeType(file.absolutePathString())
         if (isImage(mime)) {
             AsyncImage(
-                model = file.toFile(),
+                model = "",
                 contentDescription = "image file",
                 modifier = iconModifier
             )
