@@ -12,7 +12,7 @@ import com.algebnaly.neonfiles.R
 fun ProgressScreen(onHide: () -> Unit, onCancel: () -> Unit) {
     val cancel_button_name = stringResource(R.string.cancel_button_name)
     val hide_button_name = stringResource(id=R.string.hide_button_name)
-    
+
     Column {
         Row {
             Button(

@@ -57,6 +57,7 @@ fun FileListScreen(viewState: MainViewModel) {
     }
     Box(modifier = Modifier.fillMaxSize()){
         FileListView(viewState)
+        ProgressScreen(onHide = {}, onCancel = {})
     }
 }
 
