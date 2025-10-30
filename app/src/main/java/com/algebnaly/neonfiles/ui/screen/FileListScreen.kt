@@ -4,7 +4,9 @@ import android.app.Activity
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
@@ -17,6 +19,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
 import com.algebnaly.neonfiles.filesystem.utils.isDirectorySafe
 import com.algebnaly.neonfiles.ui.MainViewModel
@@ -50,7 +55,9 @@ fun FileListScreen(viewState: MainViewModel) {
             context = context
         )
     }
-    FileListView(viewState)
+    Box(modifier = Modifier.fillMaxSize()){
+        FileListView(viewState)
+    }
 }
 
 @Composable

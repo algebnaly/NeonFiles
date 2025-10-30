@@ -4,15 +4,20 @@ import android.util.Log
 import com.algebnaly.neonfiles.filesystem.utils.CopyOnErrorOperation
 import com.algebnaly.neonfiles.filesystem.utils.isDirectorySafe
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
+import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.OnErrorResult
@@ -34,7 +39,6 @@ class BackgroundFileOperationManager(
     private val scope: CoroutineScope,
     val onRefresh: () -> Unit = {}
 ) {
-
     private val _eventFlow =
         MutableSharedFlow<BackgroundFileOperationManagerInfo>(
             replay = 0,
@@ -51,15 +55,17 @@ class BackgroundFileOperationManager(
         scope.launch {
             for (f in fileSet) {
                 try {
-                    Log.d("neonFilesDebug", "before copyToDir")
-                    copyToDir(f, targetDir)
+                    withContext(Dispatchers.IO){
+                        copyToDir(f, targetDir)
+                    }
                 } catch (e: Exception) {
                     _eventFlow.emit(BackgroundFileOperationManagerInfo.Err(e.toString()))
+                    throw e
                 }
             }
             _eventFlow.emit(BackgroundFileOperationManagerInfo.CopyOk(targetDir))
+            onRefresh()
         }
-        onRefresh()
     }
 
     @OptIn(ExperimentalPathApi::class)
@@ -77,10 +83,8 @@ class BackgroundFileOperationManager(
     }
 
     @OptIn(ExperimentalPathApi::class)
-    private suspend fun copyToDir(src: Path, dst: Path) {
-        Log.d("neonFilesDebug", "before resolve")
+    private fun copyToDir(src: Path, dst: Path) {
         val realTarget = dst.resolve(src.fileName.toString())
-        Log.d("neonFilesDebug", "after resolve")
         if (isSubDirectory(
                 src,
                 realTarget,
@@ -90,7 +94,6 @@ class BackgroundFileOperationManager(
             return
         }
         if (src.fileSystem == dst.fileSystem) {
-            Log.d("neonFilesDebug", src.fileSystem.provider().scheme)
             when (src.fileSystem.provider().scheme) {
                 "file" -> {
                     // links are not support for now
@@ -120,8 +123,7 @@ class BackgroundFileOperationManager(
                 }
             }
         } else {
-            Log.d("neonFilesDebug", "not the same filesystem")
-            copyRecursivelySimple(src, dst, onError = { p1, p2, p3 ->
+            copyRecursivelySimple(src, realTarget, onError = { p1, p2, p3 ->
                 CopyOnErrorOperation.Terminate
             })
         }
@@ -149,7 +151,6 @@ fun copyRecursivelySimple(
     onError: (s: Path, d: Path, e: Exception) -> CopyOnErrorOperation
 ) {
     if (src.isRegularFile()) {
-        Log.d("neonFilesDebug", "src is RegularFile")
         copyStreamLike(src, dst, onError = onError)
         return
     }
@@ -211,7 +212,6 @@ fun copyRecursivelySimple(
             })
         } catch (e: Exception) {
             onError(src, dst, e)
-            Log.d("neonFilesDebug", e.toString())
         }
     }
 }
@@ -229,17 +229,28 @@ fun copyStreamLike(
             }
         }
 
+        Log.d("neonFilesDebug", "before copy using stream")
         // 使用流复制文件内容
-        src.inputStream().use { input ->
-            dst.outputStream().use { output ->
-                input.copyTo(output)
+        val chl = src.fileSystem.provider().newByteChannel(src, setOf(StandardOpenOption.READ))
+
+        chl.use { channel ->
+            FileChannel.open(dst, StandardOpenOption.WRITE, StandardOpenOption.CREATE).use { out ->
+                val buffer = ByteBuffer.allocateDirect(1024 * 1024)
+                while (channel.read(buffer) > 0) {
+                    buffer.flip()
+                    out.write(buffer)
+                    buffer.clear()
+                }
             }
         }
 
+        Log.d("neonFilesDebug", "before setAttr")
         try {
             val attrs = Files.readAttributes(src, BasicFileAttributes::class.java)
             Files.setLastModifiedTime(dst, attrs.lastModifiedTime())
         } catch (e: Exception) {
+            Log.d("neonFilesDebug", "setAttr Error")
+            throw e
             TODO("Not Implemented: " + e.toString())
         }
 
