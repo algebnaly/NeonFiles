@@ -17,7 +17,7 @@ import com.algebnaly.neonfiles.ui.MainViewModel
 import com.algebnaly.neonfiles.ui.OperationMode
 
 @Composable
-fun CopyMenuView(viewModel: MainViewModel) {
+fun CopyMenuView(viewModel: MainViewModel, progressViewModel: ProgressViewModel) {
     val copy_operation_name = stringResource(R.string.copy_operation_name)
     val cancel_operation_name = stringResource(R.string.cancel_operation_name)
     val context = LocalContext.current
@@ -33,6 +33,7 @@ fun CopyMenuView(viewModel: MainViewModel) {
                         viewModel.selectedPathSet.value,
                         viewModel.currentPath.value
                     )
+                    progressViewModel.show()
                     viewModel.selectedPathSet.value = emptySet()
                     viewModel.operationMode.value = OperationMode.Browser
                 }

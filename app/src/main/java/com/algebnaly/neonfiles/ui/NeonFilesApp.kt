@@ -24,7 +24,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.algebnaly.neonfiles.tasks.BackgroundFileOperationManagerInfo
 import com.algebnaly.neonfiles.ui.components.DrawerContentView
+import com.algebnaly.neonfiles.ui.components.ProgressViewModel
 import com.algebnaly.neonfiles.ui.screen.FileListScreen
 import com.algebnaly.neonfiles.ui.screen.NFS4AddLocationScreen
 import kotlinx.coroutines.CoroutineScope
@@ -39,7 +41,8 @@ enum class NeonFilesScreen() {
 fun NeonFilesNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController,
-    mainViewModel: MainViewModel
+    mainViewModel: MainViewModel,
+    progressViewModel: ProgressViewModel
 ) {
     NavHost(
         navController = navController,
@@ -47,7 +50,7 @@ fun NeonFilesNavHost(
         modifier = modifier
     ) {
         composable(route = NeonFilesScreen.FileListScreen.name) {
-            FileListScreen(mainViewModel)
+            FileListScreen(mainViewModel,progressViewModel)
         }
         composable(route = NeonFilesScreen.NFS4AddLocationScreen.name) {
             NFS4AddLocationScreen(onBack = {
@@ -77,7 +80,7 @@ fun NeonFilesTopAppBar(scope: CoroutineScope, drawerState: DrawerState) {
 
 
 @Composable
-fun NeonFilesApp(mainViewModel: MainViewModel = viewModel(factory = AppViewModelProvider.Factory)) {
+fun NeonFilesApp(mainViewModel: MainViewModel = viewModel(factory = AppViewModelProvider.Factory), progressViewModel: ProgressViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val navController = rememberNavController()
@@ -119,7 +122,8 @@ fun NeonFilesApp(mainViewModel: MainViewModel = viewModel(factory = AppViewModel
             NeonFilesNavHost(
                 modifier = Modifier.padding(paddingValues),
                 navController = navController,
-                mainViewModel = mainViewModel
+                mainViewModel = mainViewModel,
+                progressViewModel = progressViewModel
             )
         }
     }

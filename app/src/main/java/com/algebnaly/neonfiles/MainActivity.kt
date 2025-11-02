@@ -7,8 +7,16 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.core.net.toUri
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.algebnaly.neonfiles.ui.AppViewModelProvider
 import com.algebnaly.neonfiles.ui.NeonFilesApp
+import com.algebnaly.neonfiles.ui.components.ProgressOverlay
+import com.algebnaly.neonfiles.ui.components.ProgressViewModel
 import com.algebnaly.neonfiles.ui.theme.AppTheme
 
 
@@ -30,9 +38,17 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            AppTheme {
-                NeonFilesApp()
-            }
+            NeonFilesMainApp()
+        }
+    }
+}
+
+@Composable
+fun NeonFilesMainApp(progressViewModel: ProgressViewModel = viewModel(factory = AppViewModelProvider.Factory)){
+    AppTheme {
+        Box(modifier = Modifier.fillMaxSize()){
+            NeonFilesApp(progressViewModel = progressViewModel)
+            ProgressOverlay(progressViewModel)
         }
     }
 }

@@ -32,7 +32,7 @@ import java.util.stream.Collectors
 import kotlin.use
 
 @Composable
-fun FileListView(viewState: MainViewModel) {
+fun FileListView(viewState: MainViewModel, progressViewModel: ProgressViewModel) {
     val operationMode by viewState.operationMode.collectAsState()
     val currentPath by viewState.currentPath.collectAsState()
     val refreshTrigger by viewState.refreshTrigger.collectAsState()
@@ -83,7 +83,7 @@ fun FileListView(viewState: MainViewModel) {
             if (operationMode == OperationMode.Select) {
                 SelectMenuView(viewState)
             } else if (operationMode == OperationMode.Copy) {
-                CopyMenuView(viewState)
+                CopyMenuView(viewModel = viewState, progressViewModel = progressViewModel)
             }
 
         }

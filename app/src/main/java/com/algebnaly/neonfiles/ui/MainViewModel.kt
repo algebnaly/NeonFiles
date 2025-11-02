@@ -1,21 +1,17 @@
 package com.algebnaly.neonfiles.ui
 
-import android.app.Application
-import android.content.Context
-import android.util.Log
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.algebnaly.neonfiles.data.LocationItem
 import com.algebnaly.neonfiles.filesystem.FsProvider
 import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
+import com.algebnaly.neonfiles.tasks.BackgroundFileOperationManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
 import java.nio.file.Path
 
 enum class OperationMode {
@@ -25,7 +21,7 @@ enum class OperationMode {
     Cut
 }
 
-class MainViewModel(val fsProvider: FsProvider) : ViewModel() {
+class MainViewModel(val fsProvider: FsProvider, val fileOperationManager: BackgroundFileOperationManager) : ViewModel() {
     val currentPath: MutableStateFlow<Path> by lazy {
         MutableStateFlow(getExternalRootPath())
     }
@@ -36,10 +32,6 @@ class MainViewModel(val fsProvider: FsProvider) : ViewModel() {
     val selectedPathSet: MutableStateFlow<Set<Path>> = MutableStateFlow(emptySet())
     val operationMode: MutableStateFlow<OperationMode> = MutableStateFlow(OperationMode.Browser)
 
-    val fileOperationManager: BackgroundFileOperationManager =
-        BackgroundFileOperationManager(viewModelScope, onRefresh = {
-            refresh()
-        })
     private val _toastFlow = MutableSharedFlow<String>()
     val toastFlow: SharedFlow<String> = _toastFlow
 

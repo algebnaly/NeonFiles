@@ -28,6 +28,7 @@ import com.algebnaly.neonfiles.ui.MainViewModel
 import com.algebnaly.neonfiles.ui.OperationMode
 import com.algebnaly.neonfiles.ui.components.FileListView
 import com.algebnaly.neonfiles.ui.components.FileView
+import com.algebnaly.neonfiles.ui.components.ProgressViewModel
 import com.algebnaly.neonfiles.ui.components.SelectableFileView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.update
@@ -36,7 +37,7 @@ import java.nio.file.Path
 import kotlin.io.path.isDirectory
 
 @Composable
-fun FileListScreen(viewState: MainViewModel) {
+fun FileListScreen(viewState: MainViewModel, progressViewModel: ProgressViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val currentPath by viewState.currentPath.collectAsState()
@@ -55,10 +56,7 @@ fun FileListScreen(viewState: MainViewModel) {
             context = context
         )
     }
-    Box(modifier = Modifier.fillMaxSize()){
-        FileListView(viewState)
-        ProgressScreen(onHide = {}, onCancel = {})
-    }
+    FileListView(viewState = viewState, progressViewModel =  progressViewModel)
 }
 
 @Composable

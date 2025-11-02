@@ -1,33 +1,31 @@
-package com.algebnaly.neonfiles.ui
+package com.algebnaly.neonfiles.tasks
 
 import android.util.Log
 import com.algebnaly.neonfiles.filesystem.utils.CopyOnErrorOperation
 import com.algebnaly.neonfiles.filesystem.utils.isDirectorySafe
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
-import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.SimpleFileVisitor
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
+import java.util.UUID
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.OnErrorResult
 import kotlin.io.path.absolute
 import kotlin.io.path.copyToRecursively
 import kotlin.io.path.deleteRecursively
 import kotlin.io.path.exists
-import kotlin.io.path.inputStream
 import kotlin.io.path.isRegularFile
-import kotlin.io.path.outputStream
 
 sealed class BackgroundFileOperationManagerInfo {
     data class Ok(val message: String) : BackgroundFileOperationManagerInfo()
@@ -35,9 +33,9 @@ sealed class BackgroundFileOperationManagerInfo {
     data class Err(val message: String) : BackgroundFileOperationManagerInfo()
 }
 
+
 class BackgroundFileOperationManager(
     private val scope: CoroutineScope,
-    val onRefresh: () -> Unit = {}
 ) {
     private val _eventFlow =
         MutableSharedFlow<BackgroundFileOperationManagerInfo>(
@@ -47,25 +45,40 @@ class BackgroundFileOperationManager(
         )
 
     val eventFlow = _eventFlow.asSharedFlow()
+    val taskManager = TaskManager()
 
     fun doCopy(fileSet: Set<Path>, targetDir: Path) {
         if (!targetDir.isDirectorySafe()) {
             return
         }
-        scope.launch {
+        val taskId: UUID = UUID.randomUUID()
+        val job = scope.launch(Dispatchers.IO) {
             for (f in fileSet) {
                 try {
-                    withContext(Dispatchers.IO){
-                        copyToDir(f, targetDir)
-                    }
-                } catch (e: Exception) {
+                    ensureActive()
+                        copyToDir(f, targetDir, onProgress = {
+                            p ->
+                            taskManager.onProgress(p, taskId)
+                        }
+                        )
+                }  catch (_: CancellationException){
+                    // task cancelled, do nothing
+                    // TODO: raise a toast that info this cancellation
+                }
+                catch (e: Exception) {
                     _eventFlow.emit(BackgroundFileOperationManagerInfo.Err(e.toString()))
                     throw e
                 }
             }
             _eventFlow.emit(BackgroundFileOperationManagerInfo.CopyOk(targetDir))
-            onRefresh()
+            taskManager.removeTask(taskId)
+
         }
+        taskManager.addTask(taskId, TaskInfo(
+            name = "copy $fileSet to $targetDir",// TODO: i18n
+            job = job,
+            progression = 0f
+        ))
     }
 
     @OptIn(ExperimentalPathApi::class)
@@ -79,11 +92,10 @@ class BackgroundFileOperationManager(
                 _eventFlow.emit(BackgroundFileOperationManagerInfo.Err(e.toString()))
             }
         }
-        onRefresh()
     }
 
     @OptIn(ExperimentalPathApi::class)
-    private fun copyToDir(src: Path, dst: Path) {
+    private suspend fun copyToDir(src: Path, dst: Path, onProgress: (Float) -> Unit) {
         val realTarget = dst.resolve(src.fileName.toString())
         if (isSubDirectory(
                 src,
@@ -111,19 +123,19 @@ class BackgroundFileOperationManager(
 
                 "nfs4" -> {
                     // TODO server side coping
-                    copyRecursivelySimple(src, dst, onError = { p1, p2, p3 ->
+                    copyRecursivelySimple(src, dst, onProgress = onProgress,onError = { p1, p2, p3 ->
                         CopyOnErrorOperation.Terminate
                     })
                 }
 
                 else -> {
-                    copyRecursivelySimple(src, dst, onError = { p1, p2, p3 ->
+                    copyRecursivelySimple(src, dst, onProgress = onProgress,onError = { p1, p2, p3 ->
                         CopyOnErrorOperation.Terminate
                     })
                 }
             }
         } else {
-            copyRecursivelySimple(src, realTarget, onError = { p1, p2, p3 ->
+            copyRecursivelySimple(src, realTarget,onProgress = onProgress, onError = { p1, p2, p3 ->
                 CopyOnErrorOperation.Terminate
             })
         }
@@ -145,116 +157,92 @@ fun isSubDirectory(src: Path, dst: Path, includeSelf: Boolean = true): Boolean {
     return false
 }
 
-fun copyRecursivelySimple(
+suspend fun copyRecursivelySimple(
     src: Path,
     dst: Path,
+    onProgress: (newProgress: Float) -> Unit,
     onError: (s: Path, d: Path, e: Exception) -> CopyOnErrorOperation
-) {
-    if (src.isRegularFile()) {
-        copyStreamLike(src, dst, onError = onError)
-        return
-    }
-    if (src.isDirectorySafe()) {
-        try {
-            if (!dst.exists()) {
-                Files.createDirectories(dst)
-            }
-        } catch (e: Exception) {
-            when (onError(src, dst, e)) {
-                CopyOnErrorOperation.Terminate -> return
-                CopyOnErrorOperation.Continue -> return
-            }
-        }
+): Unit = withContext(Dispatchers.IO) {
+    ensureActive()
 
-        try {
-            Files.walkFileTree(src, object : SimpleFileVisitor<Path>() {
-                override fun preVisitDirectory(
-                    dir: Path,
-                    attrs: BasicFileAttributes
-                ): FileVisitResult {
-                    val relativePath = src.relativize(dir)
-                    val targetDir = dst.resolve(relativePath)
-
-                    try {
-                        if (!targetDir.exists()) {
-                            Files.createDirectory(targetDir)
-                        }
-                    } catch (e: Exception) {
-                        return when (onError(dir, targetDir, e)) {
-                            CopyOnErrorOperation.Terminate -> FileVisitResult.TERMINATE
-                            CopyOnErrorOperation.Continue -> FileVisitResult.SKIP_SUBTREE
-                        }
-                    }
-                    return FileVisitResult.CONTINUE
-                }
-
-                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                    val relativePath = src.relativize(file)
-                    val targetFile = dst.resolve(relativePath)
-
-                    try {
-                        copyStreamLike(file, targetFile, onError = onError)
-                    } catch (e: Exception) {
-                        return when (onError(file, targetFile, e)) {
-                            CopyOnErrorOperation.Terminate -> FileVisitResult.TERMINATE
-                            CopyOnErrorOperation.Continue -> FileVisitResult.CONTINUE
-                        }
-                    }
-                    return FileVisitResult.CONTINUE
-                }
-
-                override fun visitFileFailed(file: Path, exc: IOException): FileVisitResult {
-                    return when (onError(file, dst.resolve(src.relativize(file)), exc)) {
-                        CopyOnErrorOperation.Terminate -> FileVisitResult.TERMINATE
-                        CopyOnErrorOperation.Continue -> FileVisitResult.CONTINUE
-                    }
-                }
-            })
-        } catch (e: Exception) {
-            onError(src, dst, e)
-        }
-    }
-}
-
-fun copyStreamLike(
-    src: Path,
-    dst: Path,
-    onError: (s: Path, d: Path, e: Exception) -> CopyOnErrorOperation
-) {
-    Log.d("NeonFilesDebug", "enter copyStreamLike")
     try {
-        dst.parent?.let { parent ->
-            if (!parent.exists()) {
-                Files.createDirectories(parent)
-            }
+        if (src.isRegularFile()) {
+            copyStreamLike(src, dst, onProgress = onProgress, onError)
+            return@withContext
         }
 
-        Log.d("neonFilesDebug", "before copy using stream")
-        // 使用流复制文件内容
-        val chl = src.fileSystem.provider().newByteChannel(src, setOf(StandardOpenOption.READ))
+        if (!dst.exists()) {
+            Files.createDirectories(dst)
+        }
 
-        chl.use { channel ->
-            FileChannel.open(dst, StandardOpenOption.WRITE, StandardOpenOption.CREATE).use { out ->
-                val buffer = ByteBuffer.allocateDirect(1024 * 1024)
-                while (channel.read(buffer) > 0) {
-                    buffer.flip()
-                    out.write(buffer)
-                    buffer.clear()
+        Files.list(src).use { stream ->
+            for (child in stream) {
+                ensureActive()
+
+                val target = dst.resolve(child.fileName)
+                try {
+                    copyRecursivelySimple(child, target, onProgress=onProgress, onError = onError)
+                } catch (e: Exception) {
+                    when (onError(child, target, e)) {
+                        CopyOnErrorOperation.Terminate -> return@withContext
+                        CopyOnErrorOperation.Continue -> continue
+                    }
                 }
             }
         }
-
-        Log.d("neonFilesDebug", "before setAttr")
-        try {
-            val attrs = Files.readAttributes(src, BasicFileAttributes::class.java)
-            Files.setLastModifiedTime(dst, attrs.lastModifiedTime())
-        } catch (e: Exception) {
-            Log.d("neonFilesDebug", "setAttr Error")
-            throw e
-            TODO("Not Implemented: " + e.toString())
-        }
-
     } catch (e: Exception) {
         onError(src, dst, e)
     }
+}
+
+suspend fun copyStreamLike(
+    src: Path,
+    dst: Path,
+    onProgress: (Float) -> Unit,
+    onError: (s: Path, d: Path, e: Exception) -> CopyOnErrorOperation
+) = withContext(Dispatchers.IO) {
+        try {
+            dst.parent?.let { parent ->
+                if (!parent.exists()) {
+                    Files.createDirectories(parent)
+                }
+            }
+
+            // 使用流复制文件内容
+            val chl = src.fileSystem.provider().newByteChannel(src, setOf(StandardOpenOption.READ))
+            val totalSize = chl.size()
+            var writtenBytes = 0
+            chl.use { channel ->
+                FileChannel.open(dst, StandardOpenOption.WRITE, StandardOpenOption.CREATE).use { out ->
+                    val buffer = ByteBuffer.allocateDirect(1024 * 1024)
+                    while (channel.read(buffer) > 0) {
+                        ensureActive()
+                        buffer.flip()
+                        writtenBytes += out.write(buffer)
+                        if(totalSize > 0){
+                            onProgress(writtenBytes.toFloat() / totalSize)
+                        }else{
+                            onProgress(1f)
+                        }
+                        buffer.clear()
+                    }
+                }
+            }
+
+            try {
+                val attrs = Files.readAttributes(src, BasicFileAttributes::class.java)
+                Files.setLastModifiedTime(dst, attrs.lastModifiedTime())
+            } catch (e: Exception) {
+                Log.d("neonFilesDebug", "setAttr Error")
+                throw e
+                TODO("Not Implemented: " + e.toString())
+            }
+
+        } catch (_: CancellationException){
+            //TODO: info this cancellation
+            // close files here
+        }
+        catch (e: Exception) {
+            onError(src, dst, e)
+        }
 }
