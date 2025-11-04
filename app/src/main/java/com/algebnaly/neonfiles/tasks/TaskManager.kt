@@ -4,8 +4,10 @@ import kotlinx.coroutines.Job
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-data class TaskInfo(val name: String, val job: Job, var progression: Float)
+data class ProgressInfo(var current: Long, val total: Long)
+data class TaskInfo(val name: String, val job: Job, var progressInfo: ProgressInfo)
 
+typealias OnProgressType = (p: ProgressInfo) -> Unit
 class TaskManager {
     private val tasks = ConcurrentHashMap<UUID, TaskInfo>()
 
@@ -21,8 +23,13 @@ class TaskManager {
         return tasks.remove(id)
     }
 
-    fun onProgress(progress: Float, id: UUID) {
-        getTaskInfo(id)?.progression = progress// remember, this operation is not thread safe, but for our case, this is safe.
+    fun cancelTask(id: UUID) {
+        tasks.get(id)?.job?.cancel()
+    }
+
+    fun onProgress(p: ProgressInfo, id: UUID) {
+        getTaskInfo(id)?.progressInfo = p// remember, this operation is not thread safe, but for our case, this is safe.
+
     }
 
     fun getTaskInfo(id: UUID): TaskInfo? {

@@ -19,12 +19,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.algebnaly.neonfiles.R
 import com.algebnaly.neonfiles.tasks.BackgroundFileOperationManagerInfo
+import com.algebnaly.neonfiles.tasks.OperationType
 import com.algebnaly.neonfiles.ui.components.DrawerContentView
 import com.algebnaly.neonfiles.ui.components.ProgressViewModel
 import com.algebnaly.neonfiles.ui.screen.FileListScreen
@@ -44,6 +47,7 @@ fun NeonFilesNavHost(
     mainViewModel: MainViewModel,
     progressViewModel: ProgressViewModel
 ) {
+
     NavHost(
         navController = navController,
         startDestination = NeonFilesScreen.FileListScreen.name,
@@ -86,6 +90,11 @@ fun NeonFilesApp(mainViewModel: MainViewModel = viewModel(factory = AppViewModel
     val navController = rememberNavController()
     val context = LocalContext.current
 
+    val copyOperationName = stringResource(R.string.copy_operation_name)
+    val cutOperationName = stringResource(R.string.cut_operation_name)
+    val deleteOperationName = stringResource(R.string.delete_operation_name)
+    val successName = stringResource(R.string.success)
+
     LaunchedEffect(Unit) {
         mainViewModel.toastFlow.collect { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -95,9 +104,16 @@ fun NeonFilesApp(mainViewModel: MainViewModel = viewModel(factory = AppViewModel
     LaunchedEffect(Unit) {
         mainViewModel.fileOperationManager.eventFlow.collect { message ->
             val messageStr = when(message){
-                is BackgroundFileOperationManagerInfo.CopyOk -> "copy to ${message.targetDir} success"
+                is BackgroundFileOperationManagerInfo.Ok -> {
+                    val opName = when(message.type) {
+                        OperationType.Copy -> copyOperationName
+                        OperationType.Cut -> cutOperationName
+                        OperationType.Delete -> deleteOperationName
+                    }
+                    "$opName ${message.message} $successName"
+                }
                 is BackgroundFileOperationManagerInfo.Err -> message.message
-                is BackgroundFileOperationManagerInfo.Ok -> message.message
+                is BackgroundFileOperationManagerInfo.Cancel -> ""
             }
             Toast.makeText(context, messageStr, Toast.LENGTH_SHORT).show()
         }

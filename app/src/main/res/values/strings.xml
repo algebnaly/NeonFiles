@@ -13,4 +13,5 @@
     <string name="server_address_name">server address</string>
     <string name="cancel_button_name">Cancel</string>
     <string name="hide_button_name">Hide</string>
+    <string name="success">success</string>
 </resources>

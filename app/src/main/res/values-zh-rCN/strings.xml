@@ -14,4 +14,5 @@
     <string name="server_address_name">服务器地址</string>
     <string name="cancel_button_name">取消</string>
     <string name="hide_button_name">隐藏</string>
+    <string name="success">成功</string>
 </resources>

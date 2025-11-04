@@ -27,10 +27,16 @@ import kotlin.io.path.deleteRecursively
 import kotlin.io.path.exists
 import kotlin.io.path.isRegularFile
 
+enum class OperationType{
+    Copy,
+    Cut,
+    Delete
+}
+
 sealed class BackgroundFileOperationManagerInfo {
-    data class Ok(val message: String) : BackgroundFileOperationManagerInfo()
-    data class CopyOk(val targetDir: Path) : BackgroundFileOperationManagerInfo()
-    data class Err(val message: String) : BackgroundFileOperationManagerInfo()
+    data class Ok(val type: OperationType, val message: String) : BackgroundFileOperationManagerInfo()
+    data class Err(val type: OperationType, val message: String) : BackgroundFileOperationManagerInfo()
+    data class Cancel(val type: OperationType): BackgroundFileOperationManagerInfo()
 }
 
 
@@ -52,6 +58,8 @@ class BackgroundFileOperationManager(
             return
         }
         val taskId: UUID = UUID.randomUUID()
+        var canceled = false
+        var hasError = false
         val job = scope.launch(Dispatchers.IO) {
             for (f in fileSet) {
                 try {
@@ -59,25 +67,32 @@ class BackgroundFileOperationManager(
                         copyToDir(f, targetDir, onProgress = {
                             p ->
                             taskManager.onProgress(p, taskId)
-                        }
-                        )
+                        })
                 }  catch (_: CancellationException){
+                    canceled = true
                     // task cancelled, do nothing
                     // TODO: raise a toast that info this cancellation
                 }
                 catch (e: Exception) {
-                    _eventFlow.emit(BackgroundFileOperationManagerInfo.Err(e.toString()))
-                    throw e
+                    _eventFlow.emit(BackgroundFileOperationManagerInfo.Err(type = OperationType.Copy, message = e.toString()))
+                    hasError = true
                 }
             }
-            _eventFlow.emit(BackgroundFileOperationManagerInfo.CopyOk(targetDir))
+            if (canceled){
+                _eventFlow.emit(BackgroundFileOperationManagerInfo.Cancel(type = OperationType.Copy))
+            }else if(!hasError){
+                _eventFlow.emit(BackgroundFileOperationManagerInfo.Ok(type = OperationType.Copy, message = fileSet.toString()))
+            }
             taskManager.removeTask(taskId)
 
         }
         taskManager.addTask(taskId, TaskInfo(
             name = "copy $fileSet to $targetDir",// TODO: i18n
             job = job,
-            progression = 0f
+            progressInfo = ProgressInfo(
+                current = 0,
+                total = 1
+            )
         ))
     }
 
@@ -89,14 +104,15 @@ class BackgroundFileOperationManager(
                     f.deleteRecursively()
                 }
             } catch (e: Exception) {
-                _eventFlow.emit(BackgroundFileOperationManagerInfo.Err(e.toString()))
+                _eventFlow.emit(BackgroundFileOperationManagerInfo.Err(type = OperationType.Delete, message = e.toString()))
             }
         }
     }
 
     @OptIn(ExperimentalPathApi::class)
-    private suspend fun copyToDir(src: Path, dst: Path, onProgress: (Float) -> Unit) {
+    private suspend fun copyToDir(src: Path, dst: Path, onProgress: OnProgressType) {
         val realTarget = dst.resolve(src.fileName.toString())
+        Log.d("neonFilesDebug", "resolve to $realTarget")
         if (isSubDirectory(
                 src,
                 realTarget,
@@ -114,8 +130,7 @@ class BackgroundFileOperationManager(
                         followLinks = false,
                         onError = { s, d, e ->
                             scope.launch {
-                                Log.d("neonFilesDebug", e.toString())
-                                _eventFlow.emit(BackgroundFileOperationManagerInfo.Err(e.toString()))
+                                _eventFlow.emit(BackgroundFileOperationManagerInfo.Err(type = OperationType.Copy, message = e.toString()))
                             }
                             OnErrorResult.TERMINATE
                         })
@@ -160,11 +175,12 @@ fun isSubDirectory(src: Path, dst: Path, includeSelf: Boolean = true): Boolean {
 suspend fun copyRecursivelySimple(
     src: Path,
     dst: Path,
-    onProgress: (newProgress: Float) -> Unit,
+    onProgress: OnProgressType,
     onError: (s: Path, d: Path, e: Exception) -> CopyOnErrorOperation
 ): Unit = withContext(Dispatchers.IO) {
-    ensureActive()
 
+    Log.d("neonFilesDebug", "enter copyRecursivelySimple $dst")
+    ensureActive()
     try {
         if (src.isRegularFile()) {
             copyStreamLike(src, dst, onProgress = onProgress, onError)
@@ -178,7 +194,6 @@ suspend fun copyRecursivelySimple(
         Files.list(src).use { stream ->
             for (child in stream) {
                 ensureActive()
-
                 val target = dst.resolve(child.fileName)
                 try {
                     copyRecursivelySimple(child, target, onProgress=onProgress, onError = onError)
@@ -198,9 +213,10 @@ suspend fun copyRecursivelySimple(
 suspend fun copyStreamLike(
     src: Path,
     dst: Path,
-    onProgress: (Float) -> Unit,
+    onProgress: OnProgressType,
     onError: (s: Path, d: Path, e: Exception) -> CopyOnErrorOperation
 ) = withContext(Dispatchers.IO) {
+        Log.d("neonFilesDebug", "enter copyStreamLike")
         try {
             dst.parent?.let { parent ->
                 if (!parent.exists()) {
@@ -208,24 +224,30 @@ suspend fun copyStreamLike(
                 }
             }
 
+            Log.d("neonFilesDebug", "before open channel")
             // 使用流复制文件内容
             val chl = src.fileSystem.provider().newByteChannel(src, setOf(StandardOpenOption.READ))
             val totalSize = chl.size()
+            Log.d("neonFilesDebug", "after open channel")
             var writtenBytes = 0
             chl.use { channel ->
-                FileChannel.open(dst, StandardOpenOption.WRITE, StandardOpenOption.CREATE).use { out ->
+                dst.fileSystem.provider().newByteChannel(dst, setOf(StandardOpenOption.WRITE, StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING)).use { out ->
                     val buffer = ByteBuffer.allocateDirect(1024 * 1024)
+                    Log.d("neonFilesDebug", "before read")
                     while (channel.read(buffer) > 0) {
                         ensureActive()
                         buffer.flip()
+                        Log.d("neonFilesDebug", "write call!")
                         writtenBytes += out.write(buffer)
                         if(totalSize > 0){
-                            onProgress(writtenBytes.toFloat() / totalSize)
+                            onProgress(ProgressInfo(current = writtenBytes.toLong(), total = totalSize))
                         }else{
-                            onProgress(1f)
+                            onProgress(ProgressInfo(0, 1))
                         }
                         buffer.clear()
                     }
+                    Log.d("neonFilesDebug", "end read")
                 }
             }
 
@@ -235,7 +257,6 @@ suspend fun copyStreamLike(
             } catch (e: Exception) {
                 Log.d("neonFilesDebug", "setAttr Error")
                 throw e
-                TODO("Not Implemented: " + e.toString())
             }
 
         } catch (_: CancellationException){
