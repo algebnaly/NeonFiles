@@ -127,7 +127,7 @@ fun handleBackPress(
             scope.launch { drawerState.close() }
         }
 
-        operationMode != OperationMode.Browser -> {
+        operationMode == OperationMode.Select -> {
             viewState.selectedPathSet.value = emptySet()
             viewState.operationMode.value = OperationMode.Browser
         }

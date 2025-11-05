@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.nio.file.Path
@@ -24,6 +25,15 @@ enum class OperationMode {
 class MainViewModel(val fsProvider: FsProvider, val fileOperationManager: BackgroundFileOperationManager) : ViewModel() {
     val currentPath: MutableStateFlow<Path> by lazy {
         MutableStateFlow(getExternalRootPath())
+    }
+
+    init {
+        viewModelScope.launch {
+            fileOperationManager.eventFlow.collect(){
+                event ->
+                refresh()
+            }
+        }
     }
 
     private val _refreshTrigger = MutableStateFlow(0);
