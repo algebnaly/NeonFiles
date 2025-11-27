@@ -25,12 +25,13 @@ import com.algebnaly.neonfiles.filesystem.utils.isAudio
 import com.algebnaly.neonfiles.filesystem.utils.isDirectorySafe
 import com.algebnaly.neonfiles.filesystem.utils.isImage
 import com.algebnaly.neonfiles.filesystem.utils.isVideo
+import com.algebnaly.neonfiles.ui.PathViewState
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 
 @Composable
-fun FileView(file: Path) {
-    if (file.isDirectorySafe()) {
+fun FileView(file: PathViewState) {
+    if (file.isDirectory) {
         Icon(
             Icons.Filled.Folder,
             contentDescription = "file",
@@ -42,7 +43,7 @@ fun FileView(file: Path) {
         val iconModifier = Modifier
             .size(64.dp)
             .padding(start = 12.dp, end = 12.dp)
-        val mime = getMimeType(file.absolutePathString())
+        val mime = file.mimeType
         if (isImage(mime)) {
             AsyncImage(
                 model = "",

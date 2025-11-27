@@ -1,19 +1,27 @@
 package com.algebnaly.neonfiles.ui
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.algebnaly.neonfiles.data.LocationItem
 import com.algebnaly.neonfiles.filesystem.FsProvider
 import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
+import com.algebnaly.neonfiles.filesystem.utils.getMimeType
 import com.algebnaly.neonfiles.tasks.BackgroundFileOperationManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.nio.file.Files
 import java.nio.file.Path
+import java.util.stream.Collectors
 
 enum class OperationMode {
     Browser,
@@ -22,19 +30,12 @@ enum class OperationMode {
     Cut
 }
 
-class MainViewModel(val fsProvider: FsProvider, val fileOperationManager: BackgroundFileOperationManager) : ViewModel() {
-    val currentPath: MutableStateFlow<Path> by lazy {
-        MutableStateFlow(getExternalRootPath())
-    }
+class MainViewModel(val initialPath: Path, val fsProvider: FsProvider, val fileOperationManager: BackgroundFileOperationManager) : ViewModel() {
+    val currentPath: MutableStateFlow<Path> = MutableStateFlow(initialPath)
 
-    init {
-        viewModelScope.launch {
-            fileOperationManager.eventFlow.collect(){
-                event ->
-                refresh()
-            }
-        }
-    }
+    private val _fileItems = MutableStateFlow<List<PathViewState>>(emptyList())
+    val fileItems: StateFlow<List<PathViewState>> = _fileItems.asStateFlow()
+
 
     private val _refreshTrigger = MutableStateFlow(0);
     val refreshTrigger = _refreshTrigger.asStateFlow()
@@ -44,6 +45,21 @@ class MainViewModel(val fsProvider: FsProvider, val fileOperationManager: Backgr
 
     private val _toastFlow = MutableSharedFlow<String>()
     val toastFlow: SharedFlow<String> = _toastFlow
+
+    init {
+        viewModelScope.launch {
+            fileOperationManager.eventFlow.collect(){
+                    event ->
+                refresh()
+            }
+        }
+        viewModelScope.launch {
+            combine(currentPath, refreshTrigger) { _, _ ->
+            }.collectLatest {
+                loadFileList()
+            }
+        }
+    }
 
     fun refresh() {
         _refreshTrigger.update { it + 1 }
@@ -56,6 +72,26 @@ class MainViewModel(val fsProvider: FsProvider, val fileOperationManager: Backgr
                 currentPath.value = path
             } catch (e: Exception) {
                 sendToast(e.toString())
+            }
+        }
+    }
+
+    fun loadFileList() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val path = currentPath.value
+            try {
+                val pathList = Files.list(path).use { it.collect(Collectors.toList()) }
+                val pathViewStateList = pathList.map {path->
+                    PathViewState(
+                        path = path,
+                        name = path.fileName.toString(),
+                        mimeType = Files.probeContentType(path) ?: ""
+                    )
+                }
+                _fileItems.value = pathViewStateList
+            } catch (e: Exception) {
+                Log.d("NeonFilesDebug", e.toString())
+                _fileItems.value = emptyList()
             }
         }
     }

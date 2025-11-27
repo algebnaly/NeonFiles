@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.algebnaly.neonfiles.ui.MainViewModel
 import com.algebnaly.neonfiles.ui.OperationMode
+import com.algebnaly.neonfiles.ui.PathViewState
 import com.algebnaly.neonfiles.ui.screen.ListItemCard
 import com.algebnaly.neonfiles.ui.screen.SelectModeFileItemCard
 import java.nio.file.Files
@@ -34,19 +35,9 @@ import kotlin.use
 @Composable
 fun FileListView(viewState: MainViewModel, progressViewModel: ProgressViewModel) {
     val operationMode by viewState.operationMode.collectAsState()
-    val currentPath by viewState.currentPath.collectAsState()
-    val refreshTrigger by viewState.refreshTrigger.collectAsState()
 
-    val itemsList: List<Path> by remember(currentPath, refreshTrigger) {
-        derivedStateOf {
-            try {
-                Files.list(currentPath).use { it -> it.collect(Collectors.toList()) }
-            } catch (e: Exception) {
-                viewState.sendToast(e.toString())
-                emptyList()
-            }
-        }
-    }
+    val itemsList: List<PathViewState> by viewState.fileItems.collectAsState()
+
     val bottomMenuHeight = 56.dp
 
     val lazyColumnBottomPadding =
@@ -59,7 +50,9 @@ fun FileListView(viewState: MainViewModel, progressViewModel: ProgressViewModel)
                     bottom = lazyColumnBottomPadding
                 ),
             ) {
-                items(itemsList) { item ->
+                items(itemsList,
+                    key = { item -> item.uniqueKey }
+                    ) { item ->
                     if (operationMode == OperationMode.Select)
                         SelectModeFileItemCard(item, viewState)
                     else {

@@ -26,6 +26,7 @@ import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
 import com.algebnaly.neonfiles.filesystem.utils.isDirectorySafe
 import com.algebnaly.neonfiles.ui.MainViewModel
 import com.algebnaly.neonfiles.ui.OperationMode
+import com.algebnaly.neonfiles.ui.PathViewState
 import com.algebnaly.neonfiles.ui.components.FileListView
 import com.algebnaly.neonfiles.ui.components.FileView
 import com.algebnaly.neonfiles.ui.components.ProgressViewModel
@@ -60,7 +61,7 @@ fun FileListScreen(viewState: MainViewModel, progressViewModel: ProgressViewMode
 }
 
 @Composable
-fun SelectModeFileItemCard(file: Path, viewState: MainViewModel) {
+fun SelectModeFileItemCard(file: PathViewState, viewState: MainViewModel) {
     val selectedPathSet by viewState.selectedPathSet.collectAsState()
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -68,48 +69,48 @@ fun SelectModeFileItemCard(file: Path, viewState: MainViewModel) {
             .fillMaxWidth()
             .combinedClickable(
                 onClick = {
-                    if (selectedPathSet.contains(file)) {
+                    if (selectedPathSet.contains(file.path)) {
                         viewState.selectedPathSet.update { f ->
-                            f.minusElement(file)
+                            f.minusElement(file.path)
                         }
                     } else {
                         viewState.selectedPathSet.update { f ->
-                            f.plusElement(file)
+                            f.plusElement(file.path)
                         }
                     }
                 }
             )
     )
     {
-        SelectableFileView(selected = selectedPathSet.contains(file)) {
+        SelectableFileView(selected = selectedPathSet.contains(file.path)) {
             FileView(file)
         }
-        Text(text = file.fileName.toString())
+        Text(text = file.name)
     }
 }
 
 @Composable
-fun ListItemCard(item: Path, viewState: MainViewModel) {
+fun ListItemCard(item: PathViewState, viewState: MainViewModel) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
                 onClick = {
-                    if (item.isDirectorySafe()) {
-                        viewState.currentPath.value = item
+                    if (item.isDirectory) {
+                        viewState.currentPath.value = item.path
                     } else {
                         // TODO: open file with other app
                     }
                 }, onLongClick = {
                     viewState.selectedPathSet.update { s ->
-                        s.plusElement(item)
+                        s.plusElement(item.path)
                     }
                     viewState.operationMode.value = OperationMode.Select
                 })
     ) {
         FileView(item)
-        Text(text = item.fileName.toString())
+        Text(text = item.name)
     }
 }
 
