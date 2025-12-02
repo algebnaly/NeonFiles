@@ -27,6 +27,7 @@ import com.algebnaly.neonfiles.ui.OperationMode
 import com.algebnaly.neonfiles.ui.PathViewState
 import com.algebnaly.neonfiles.ui.screen.ListItemCard
 import com.algebnaly.neonfiles.ui.screen.SelectModeFileItemCard
+import kotlinx.coroutines.flow.filter
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.stream.Collectors
@@ -37,6 +38,7 @@ fun FileListView(viewState: MainViewModel, progressViewModel: ProgressViewModel)
     val operationMode by viewState.operationMode.collectAsState()
 
     val itemsList: List<PathViewState> by viewState.fileItems.collectAsState()
+    val filteredList = itemsList.filter { !it.name.startsWith(".") }
 
     val bottomMenuHeight = 56.dp
 
@@ -44,13 +46,13 @@ fun FileListView(viewState: MainViewModel, progressViewModel: ProgressViewModel)
         if (operationMode != OperationMode.Browser) bottomMenuHeight + 12.dp else 12.dp
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (itemsList.isNotEmpty()) {
+        if (filteredList.isNotEmpty()) {
             LazyColumn(
                 contentPadding = PaddingValues(
                     bottom = lazyColumnBottomPadding
                 ),
             ) {
-                items(itemsList,
+                items(filteredList,
                     key = { item -> item.uniqueKey }
                     ) { item ->
                     if (operationMode == OperationMode.Select)

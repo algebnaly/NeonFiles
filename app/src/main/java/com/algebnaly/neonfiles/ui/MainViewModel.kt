@@ -46,6 +46,8 @@ class MainViewModel(val initialPath: Path, val fsProvider: FsProvider, val fileO
     private val _toastFlow = MutableSharedFlow<String>()
     val toastFlow: SharedFlow<String> = _toastFlow
 
+    var showHidden: Boolean = false
+
     init {
         viewModelScope.launch {
             fileOperationManager.eventFlow.collect(){
@@ -87,10 +89,9 @@ class MainViewModel(val initialPath: Path, val fsProvider: FsProvider, val fileO
                         name = path.fileName.toString(),
                         mimeType = Files.probeContentType(path) ?: ""
                     )
-                }
+                }.sortedBy { it.name }
                 _fileItems.value = pathViewStateList
             } catch (e: Exception) {
-                Log.d("NeonFilesDebug", e.toString())
                 _fileItems.value = emptyList()
             }
         }

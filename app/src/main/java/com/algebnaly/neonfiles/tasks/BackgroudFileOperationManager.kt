@@ -26,6 +26,7 @@ import kotlin.io.path.copyToRecursively
 import kotlin.io.path.deleteRecursively
 import kotlin.io.path.exists
 import kotlin.io.path.isRegularFile
+import kotlin.io.path.name
 
 enum class OperationType {
     Copy,
@@ -68,7 +69,7 @@ class BackgroundFileOperationManager(
             for (f in fileSet) {
                 try {
                     ensureActive()
-                    copyToDir(f, targetDir, onProgress = { p ->
+                    copyToDirWithFsCheck(f, targetDir, onProgress = { p ->
                         taskManager.onProgress(p, taskId)
                     })
                 } catch (_: CancellationException) {
@@ -91,7 +92,7 @@ class BackgroundFileOperationManager(
                 _eventFlow.emit(
                     BackgroundFileOperationManagerInfo.Ok(
                         type = OperationType.Copy,
-                        message = fileSet.toString()
+                        message = summary(fileSet)
                     )
                 )
             }
@@ -117,6 +118,10 @@ class BackgroundFileOperationManager(
                 for (f in fileSet) {
                     f.deleteRecursively()
                 }
+                _eventFlow.emit(BackgroundFileOperationManagerInfo.Ok(
+                    type = OperationType.Delete,
+                    message = summary(fileSet)
+                ))
             } catch (e: Exception) {
                 _eventFlow.emit(
                     BackgroundFileOperationManagerInfo.Err(
@@ -129,11 +134,10 @@ class BackgroundFileOperationManager(
     }
 
     @OptIn(ExperimentalPathApi::class)
-    private suspend fun copyToDir(src: Path, dst: Path, onProgress: OnProgressType) {
-        val realTarget = dst.resolve(src.fileName.toString())
+    private suspend fun copyToDirWithFsCheck(src: Path, dst: Path, onProgress: OnProgressType) {
         if (isSubDirectory(
                 src,
-                realTarget,
+                dst,
                 includeSelf = true
             )
         ) { //copy a directory to its sub Directory is not allowed
@@ -144,7 +148,7 @@ class BackgroundFileOperationManager(
                 "file" -> {
                     // links are not support for now
                     src.copyToRecursively(
-                        target = realTarget,
+                        target = dst,
                         followLinks = false,
                         onError = { s, d, e ->
                             scope.launch {
@@ -155,7 +159,7 @@ class BackgroundFileOperationManager(
                                     )
                                 )
                             }
-                            OnErrorResult.TERMINATE
+                            throw e
                         })
                 }
 
@@ -163,30 +167,30 @@ class BackgroundFileOperationManager(
                     // TODO server side coping
                     copyRecursivelySimple(
                         src,
-                        realTarget,
+                        dst,
                         onProgress = onProgress,
-                        onError = { p1, p2, p3 ->
-                            CopyOnErrorOperation.Terminate
+                        onError = { s, d, e ->
+                            throw e
                         })
                 }
 
                 else -> {
                     copyRecursivelySimple(
                         src,
-                        realTarget,
+                        dst,
                         onProgress = onProgress,
-                        onError = { p1, p2, p3 ->
-                            CopyOnErrorOperation.Terminate
+                        onError = { s, d, e ->
+                            throw e
                         })
                 }
             }
         } else {
             copyRecursivelySimple(
                 src,
-                realTarget,
+                dst,
                 onProgress = onProgress,
-                onError = { p1, p2, p3 ->
-                    CopyOnErrorOperation.Terminate
+                onError = { s, d, e ->
+                    throw e
                 })
         }
     }
@@ -213,26 +217,27 @@ suspend fun copyRecursivelySimple(
     onProgress: OnProgressType,
     onError: (s: Path, d: Path, e: Exception) -> CopyOnErrorOperation
 ): Unit = withContext(Dispatchers.IO) {
-
     ensureActive()
     try {
         if (src.isRegularFile()) {
-            copyStreamLike(src, dst, onProgress = onProgress, onError)
+            val targetFile = dst.resolve(src.fileName.toString())
+            copyStreamLike(src, targetFile, onProgress = onProgress, onError)
             return@withContext
         }
 
-        if (!dst.exists()) {
-            Files.createDirectories(dst)
+        val newTarget = dst.resolve(src.fileName.toString())
+
+        if (!newTarget.exists()) {
+            Files.createDirectories(newTarget)
         }
 
         Files.list(src).use { stream ->
             for (child in stream) {
                 ensureActive()
-                val target = dst.resolve(child.fileName)
                 try {
-                    copyRecursivelySimple(child, target, onProgress = onProgress, onError = onError)
+                    copyRecursivelySimple(child, newTarget, onProgress = onProgress, onError = onError)
                 } catch (e: Exception) {
-                    when (onError(child, target, e)) {
+                    when (onError(child, newTarget, e)) {
                         CopyOnErrorOperation.Terminate -> return@withContext
                         CopyOnErrorOperation.Continue -> continue
                     }
@@ -294,5 +299,13 @@ suspend fun copyStreamLike(
         // close files here
     } catch (e: Exception) {
         onError(src, dst, e)
+    }
+}
+
+fun summary(fileSet: Set<Path>): String {
+    return when(fileSet.size) {
+        0 -> ""
+        1 -> fileSet.first().name
+        else -> fileSet.first().name + "..."
     }
 }
