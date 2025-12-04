@@ -146,9 +146,10 @@ class BackgroundFileOperationManager(
         if (src.fileSystem == dst.fileSystem) {
             when (src.fileSystem.provider().scheme) {
                 "file" -> {
+                    val realTarget = dst.resolve(src.fileName.toString())
                     // links are not support for now
                     src.copyToRecursively(
-                        target = dst,
+                        target = realTarget,
                         followLinks = false,
                         onError = { s, d, e ->
                             scope.launch {
