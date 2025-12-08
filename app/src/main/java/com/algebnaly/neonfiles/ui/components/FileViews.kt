@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Description
@@ -26,6 +27,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.algebnaly.neonfiles.filesystem.utils.getMimeType
+import com.algebnaly.neonfiles.filesystem.utils.isApkFile
 import com.algebnaly.neonfiles.filesystem.utils.isAudio
 import com.algebnaly.neonfiles.filesystem.utils.isDirectorySafe
 import com.algebnaly.neonfiles.filesystem.utils.isImage
@@ -68,8 +70,14 @@ fun FileView(file: PathViewState) {
                 modifier = iconModifier
             )
         } else if (isVideo(mime)) {
-            // TODO: preview
-        } else {
+            // TODO: preview frames
+        } else if (isApkFile(mime))
+            Icon(
+                Icons.Outlined.Android,
+                contentDescription = "apk file",
+                modifier = iconModifier
+            )
+        else {
             Icon(
                 Icons.Outlined.Description,
                 contentDescription = "normal file",

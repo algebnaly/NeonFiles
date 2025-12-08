@@ -37,6 +37,15 @@ android {
                 "proguard-rules.pro"
             )
         }
+
+        register("staging"){
+            initWith(getByName("release"))
+            isDebuggable = false
+            isJniDebuggable = false
+            isMinifyEnabled = false
+            versionNameSuffix = "-STAGING"
+            signingConfig = signingConfigs.getByName("debug")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

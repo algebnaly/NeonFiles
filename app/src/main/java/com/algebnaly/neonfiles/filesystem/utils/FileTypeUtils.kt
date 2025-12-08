@@ -26,3 +26,7 @@ fun isAudio(mime: String?): Boolean {
 fun isText(mime: String?): Boolean {
     return mime?.startsWith("text/") == true
 }
+
+fun isApkFile(mime: String?): Boolean{
+    return  mime?.startsWith("application/vnd.android.package-archive") == true
+}

@@ -4,7 +4,11 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -17,6 +21,8 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,7 +30,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat.startActivityForResult
 import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
+import com.algebnaly.neonfiles.filesystem.utils.isApkFile
 import com.algebnaly.neonfiles.filesystem.utils.isDirectorySafe
 import com.algebnaly.neonfiles.filesystem.utils.isImage
 import com.algebnaly.neonfiles.filesystem.utils.toContentUri
@@ -42,6 +50,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.nio.file.Path
 import kotlin.io.path.isDirectory
+import androidx.core.net.toUri
+import com.algebnaly.neonfiles.utils.startApkInstallationIntent
 
 @Composable
 fun FileListScreen(viewState: MainViewModel, progressViewModel: ProgressViewModel) {
@@ -63,7 +73,7 @@ fun FileListScreen(viewState: MainViewModel, progressViewModel: ProgressViewMode
             context = context
         )
     }
-    FileListView(viewState = viewState, progressViewModel =  progressViewModel)
+    FileListView(viewState = viewState, progressViewModel = progressViewModel)
 }
 
 @Composable
@@ -98,6 +108,19 @@ fun SelectModeFileItemCard(file: PathViewState, viewState: MainViewModel) {
 @Composable
 fun ListItemCard(item: PathViewState, viewState: MainViewModel) {
     val context = LocalContext.current
+
+    val fileToInstall = remember { mutableStateOf<PathViewState?>(null) }
+    val installPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK || context.packageManager.canRequestPackageInstalls()) {
+            fileToInstall.value?.let { file ->
+                startApkInstallationIntent(context, file.path)
+            }
+        }
+        fileToInstall.value = null
+    }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -108,7 +131,7 @@ fun ListItemCard(item: PathViewState, viewState: MainViewModel) {
                         viewState.currentPath.value = item.path
                     } else {
                         val mimeType = item.mimeType
-                        if(isImage(mimeType)){
+                        if (isImage(mimeType)) {
                             val uri = item.path.toContentUri()
                             val intent = Intent(Intent.ACTION_VIEW).apply {
                                 setDataAndType(uri, "image/*")
@@ -118,6 +141,17 @@ fun ListItemCard(item: PathViewState, viewState: MainViewModel) {
                                 context.startActivity(intent)
                             } catch (e: Exception) {
                                 e.printStackTrace()
+                            }
+                        } else if (isApkFile(mimeType)) {
+                            if (!context.packageManager.canRequestPackageInstalls()) {
+                                fileToInstall.value = item
+                                val permissionIntent =
+                                    Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                                        data = "package:${context.packageName}".toUri()
+                                    }
+                                installPermissionLauncher.launch(permissionIntent)
+                            } else {
+                                startApkInstallationIntent(context, item.path)
                             }
                         }
                     }

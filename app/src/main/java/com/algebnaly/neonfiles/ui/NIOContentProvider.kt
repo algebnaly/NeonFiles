@@ -10,10 +10,17 @@ import android.provider.OpenableColumns
 import android.util.Log
 import com.algebnaly.neonfiles.filesystem.utils.toNIOPath
 import com.algebnaly.neonfiles.filesystem.utils.uriToPath
+import com.algebnaly.neonfiles.tasks.ProgressInfo
+import kotlinx.coroutines.ensureActive
+import okio.ByteString.Companion.toByteString
 import java.io.FileOutputStream
 import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.channels.Channels
+import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 
 const val NeonFilesAuthority = "com.algebnaly.nfs4c.provider"
@@ -103,22 +110,34 @@ class NIOContentProvider() : ContentProvider() {
         val writeFd = pipe[1]
 
         Thread {
-            var inputStream: java.io.InputStream? = null
-            var outputStream: FileOutputStream? = null
+            var inputChannel: FileChannel? = null
+            var outputChannel: FileChannel? = null
+            val buffer = ByteBuffer.allocateDirect(1024 * 1024)
 
             try {
-                inputStream = Files.newInputStream(nioPath)
-                outputStream = FileOutputStream(writeFd.fileDescriptor)
-                inputStream.copyTo(outputStream)
+                inputChannel = FileChannel.open(
+                    nioPath,
+                    StandardOpenOption.READ
+                )
 
-                Log.d("NIOContentProvider", "File transfer completed for: $uri")
+                val fileOutputStream = FileOutputStream(writeFd.fileDescriptor)
+                outputChannel = Channels.newChannel(fileOutputStream) as? FileChannel
 
+                var bytesRead: Int
+                while (true) {
+                    bytesRead = inputChannel.read(buffer)
+                    if (bytesRead <= 0) break
+                    buffer.flip()
+                    while (buffer.hasRemaining()) {
+                        outputChannel!!.write(buffer)
+                    }
+                    buffer.clear()
+                }
             } catch (e: Exception) {
                 if (e is IOException && e.message?.contains("Broken pipe") == true) {
                     Log.w("NIOContentProvider", "Client closed pipe (Broken pipe) for: $uri")
                 } else {
                     Log.e("NIOContentProvider", "Error during file transfer for: $uri", e)
-
                     try {
                         writeFd.closeWithError(e.message)
                     } catch (closeEx: IOException) {
@@ -131,7 +150,7 @@ class NIOContentProvider() : ContentProvider() {
                     Log.e("NIOContentProvider", "Error closing write FD.", e)
                 }
                 try {
-                    inputStream?.close()
+                    inputChannel?.close()
                 } catch (e: IOException) {
                 }
             }
