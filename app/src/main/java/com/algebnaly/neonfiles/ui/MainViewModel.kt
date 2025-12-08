@@ -1,13 +1,17 @@
 package com.algebnaly.neonfiles.ui
 
 import android.util.Log
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import coil3.ImageLoader
+import coil3.video.VideoFrameDecoder
 import com.algebnaly.neonfiles.data.LocationItem
 import com.algebnaly.neonfiles.filesystem.FsProvider
 import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
 import com.algebnaly.neonfiles.filesystem.utils.getMimeType
 import com.algebnaly.neonfiles.tasks.BackgroundFileOperationManager
+import com.algebnaly.neonfiles.ui.utils.NioPathFetcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

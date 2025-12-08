@@ -15,6 +15,8 @@ import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.VideoFile
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +28,9 @@ import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import coil3.util.DebugLogger
+import coil3.video.VideoFrameDecoder
+import coil3.video.videoFrameMillis
 import com.algebnaly.neonfiles.filesystem.utils.getMimeType
 import com.algebnaly.neonfiles.filesystem.utils.isApkFile
 import com.algebnaly.neonfiles.filesystem.utils.isAudio
@@ -36,12 +41,7 @@ import com.algebnaly.neonfiles.ui.PathViewState
 import com.algebnaly.neonfiles.ui.utils.NioPathFetcher
 
 @Composable
-fun FileView(file: PathViewState) {
-
-    val imageLoader = ImageLoader.Builder(LocalContext.current).components {
-        add(NioPathFetcher.Factory())
-    }.build()
-
+fun FileView(file: PathViewState, imageLoader: ImageLoader, videoFrameLoader: ImageLoader) {
     if (file.isDirectory) {
         Icon(
             Icons.Filled.Folder,
@@ -70,7 +70,24 @@ fun FileView(file: PathViewState) {
                 modifier = iconModifier
             )
         } else if (isVideo(mime)) {
-            // TODO: preview frames
+            val videoFrameRequest = ImageRequest.Builder(LocalContext.current)
+                .data(file.path)
+                .videoFrameMillis(1000)
+                .build()
+            if (file.path.fileSystem.provider().scheme != "file") {
+                Icon(
+                    Icons.Outlined.VideoFile,
+                    contentDescription = "video file",
+                    modifier = iconModifier
+                )
+            } else {
+                AsyncImage(
+                    model = videoFrameRequest,
+                    contentDescription = "video file",
+                    imageLoader = videoFrameLoader,
+                    modifier = iconModifier
+                )
+            }
         } else if (isApkFile(mime))
             Icon(
                 Icons.Outlined.Android,

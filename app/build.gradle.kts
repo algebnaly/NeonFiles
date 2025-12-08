@@ -79,6 +79,7 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     implementation(libs.coil)
+    implementation(libs.coil.video)
     implementation(libs.nfs4c)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

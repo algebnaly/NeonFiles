@@ -1,5 +1,6 @@
 package com.algebnaly.neonfiles.ui.utils
 
+import android.util.Log
 import coil3.ImageLoader
 import coil3.decode.DataSource
 import coil3.decode.ImageSource
@@ -22,9 +23,10 @@ class NioPathFetcher(
         val okioFileSystem: FileSystem = FileSystem.SYSTEM
 
         val imageSource = ImageSource(bufferedSource, fileSystem = okioFileSystem)
+        val mime = Files.probeContentType(path)
         val sourceResult = SourceFetchResult(
             imageSource,
-            mimeType = null,
+            mimeType = mime,
             dataSource = DataSource.NETWORK
         )
         return sourceResult

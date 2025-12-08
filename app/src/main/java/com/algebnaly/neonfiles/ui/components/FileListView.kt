@@ -21,12 +21,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import coil3.ImageLoader
+import coil3.video.VideoFrameDecoder
 import com.algebnaly.neonfiles.ui.MainViewModel
 import com.algebnaly.neonfiles.ui.OperationMode
 import com.algebnaly.neonfiles.ui.PathViewState
 import com.algebnaly.neonfiles.ui.screen.ListItemCard
 import com.algebnaly.neonfiles.ui.screen.SelectModeFileItemCard
+import com.algebnaly.neonfiles.ui.utils.NioPathFetcher
 import kotlinx.coroutines.flow.filter
 import java.nio.file.Files
 import java.nio.file.Path
@@ -35,6 +39,16 @@ import kotlin.use
 
 @Composable
 fun FileListView(viewState: MainViewModel, progressViewModel: ProgressViewModel) {
+
+    val imageLoader = ImageLoader.Builder(LocalContext.current).components {
+        add(NioPathFetcher.Factory())
+    }.build()
+
+    val videoFrameLoader = ImageLoader.Builder(LocalContext.current).components {
+        add(NioPathFetcher.Factory())
+        add(VideoFrameDecoder.Factory())
+    }.build()
+
     val operationMode by viewState.operationMode.collectAsState()
 
     val itemsList: List<PathViewState> by viewState.fileItems.collectAsState()
@@ -56,9 +70,9 @@ fun FileListView(viewState: MainViewModel, progressViewModel: ProgressViewModel)
                     key = { item -> item.uniqueKey }
                     ) { item ->
                     if (operationMode == OperationMode.Select)
-                        SelectModeFileItemCard(item, viewState)
+                        SelectModeFileItemCard(item, viewState, imageLoader, videoFrameLoader)
                     else {
-                        ListItemCard(item = item, viewState)
+                        ListItemCard(item = item, viewState, imageLoader, videoFrameLoader)
                     }
                 }
             }

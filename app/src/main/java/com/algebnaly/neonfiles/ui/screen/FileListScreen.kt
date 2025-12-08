@@ -51,6 +51,7 @@ import kotlinx.coroutines.launch
 import java.nio.file.Path
 import kotlin.io.path.isDirectory
 import androidx.core.net.toUri
+import coil3.ImageLoader
 import com.algebnaly.neonfiles.utils.startApkInstallationIntent
 
 @Composable
@@ -77,7 +78,7 @@ fun FileListScreen(viewState: MainViewModel, progressViewModel: ProgressViewMode
 }
 
 @Composable
-fun SelectModeFileItemCard(file: PathViewState, viewState: MainViewModel) {
+fun SelectModeFileItemCard(file: PathViewState, viewState: MainViewModel, imageLoader: ImageLoader, videoFrameLoader: ImageLoader) {
     val selectedPathSet by viewState.selectedPathSet.collectAsState()
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -99,14 +100,14 @@ fun SelectModeFileItemCard(file: PathViewState, viewState: MainViewModel) {
     )
     {
         SelectableFileView(selected = selectedPathSet.contains(file.path)) {
-            FileView(file)
+            FileView(file, imageLoader, videoFrameLoader)
         }
         Text(text = file.name)
     }
 }
 
 @Composable
-fun ListItemCard(item: PathViewState, viewState: MainViewModel) {
+fun ListItemCard(item: PathViewState, viewState: MainViewModel, imageLoader: ImageLoader, videoFrameLoader: ImageLoader) {
     val context = LocalContext.current
 
     val fileToInstall = remember { mutableStateOf<PathViewState?>(null) }
@@ -162,7 +163,7 @@ fun ListItemCard(item: PathViewState, viewState: MainViewModel) {
                     viewState.operationMode.value = OperationMode.Select
                 })
     ) {
-        FileView(item)
+        FileView(item, imageLoader, videoFrameLoader)
         Text(text = item.name)
     }
 }
