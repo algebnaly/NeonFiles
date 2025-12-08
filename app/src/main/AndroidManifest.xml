@@ -27,6 +27,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <provider
+            android:authorities="com.algebnaly.nfs4c.provider"
+            android:name=".ui.NIOContentProvider"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            >
+
+        </provider>
     </application>
 
 </manifest>

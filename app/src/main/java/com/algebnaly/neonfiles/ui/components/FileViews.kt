@@ -1,5 +1,6 @@
 package com.algebnaly.neonfiles.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,19 +19,27 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import coil3.ImageLoader
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.algebnaly.neonfiles.filesystem.utils.getMimeType
 import com.algebnaly.neonfiles.filesystem.utils.isAudio
 import com.algebnaly.neonfiles.filesystem.utils.isDirectorySafe
 import com.algebnaly.neonfiles.filesystem.utils.isImage
 import com.algebnaly.neonfiles.filesystem.utils.isVideo
 import com.algebnaly.neonfiles.ui.PathViewState
-import java.nio.file.Path
-import kotlin.io.path.absolutePathString
+import com.algebnaly.neonfiles.ui.utils.NioPathFetcher
 
 @Composable
 fun FileView(file: PathViewState) {
+
+    val imageLoader = ImageLoader.Builder(LocalContext.current).components {
+        add(NioPathFetcher.Factory())
+    }.build()
+
     if (file.isDirectory) {
         Icon(
             Icons.Filled.Folder,
@@ -46,8 +55,9 @@ fun FileView(file: PathViewState) {
         val mime = file.mimeType
         if (isImage(mime)) {
             AsyncImage(
-                model = "",
+                model = file.path,
                 contentDescription = "image file",
+                imageLoader = imageLoader,
                 modifier = iconModifier
             )
             // TODO: preview

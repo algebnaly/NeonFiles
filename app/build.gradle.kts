@@ -82,6 +82,7 @@ dependencies {
 
 
 val nfs4cLibProjectPath = "../../../rust/nfscrs_jni/"
+val nfscrsProjectPath = "../../../rust/nfscrs/"
 val jniStorePath = layout.projectDirectory.dir("src/main/jniLibs")
 val ndkPath: String = android.ndkDirectory.absolutePath
 
@@ -94,6 +95,7 @@ tasks.named("preBuild") {
 
 val buildNFSCrsLib by tasks.registering(Exec::class) {
     inputs.dir("$nfs4cLibProjectPath/src")
+    inputs.dir("$nfscrsProjectPath/src")
     outputs.dir(jniStorePath)
     workingDir = File(nfs4cLibProjectPath)
     commandLine = listOf(

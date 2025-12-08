@@ -2,6 +2,8 @@ package com.algebnaly.neonfiles.ui.screen
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -24,7 +26,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
 import com.algebnaly.neonfiles.filesystem.utils.isDirectorySafe
+import com.algebnaly.neonfiles.filesystem.utils.isImage
+import com.algebnaly.neonfiles.filesystem.utils.toContentUri
+import com.algebnaly.neonfiles.filesystem.utils.toContentUriString
 import com.algebnaly.neonfiles.ui.MainViewModel
+import com.algebnaly.neonfiles.ui.NeonFilesAuthority
 import com.algebnaly.neonfiles.ui.OperationMode
 import com.algebnaly.neonfiles.ui.PathViewState
 import com.algebnaly.neonfiles.ui.components.FileListView
@@ -91,6 +97,7 @@ fun SelectModeFileItemCard(file: PathViewState, viewState: MainViewModel) {
 
 @Composable
 fun ListItemCard(item: PathViewState, viewState: MainViewModel) {
+    val context = LocalContext.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -100,7 +107,19 @@ fun ListItemCard(item: PathViewState, viewState: MainViewModel) {
                     if (item.isDirectory) {
                         viewState.currentPath.value = item.path
                     } else {
-                        // TODO: open file with other app
+                        val mimeType = item.mimeType
+                        if(isImage(mimeType)){
+                            val uri = item.path.toContentUri()
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(uri, "image/*")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            try {
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
                     }
                 }, onLongClick = {
                     viewState.selectedPathSet.update { s ->

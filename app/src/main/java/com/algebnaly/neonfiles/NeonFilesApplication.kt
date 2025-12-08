@@ -17,11 +17,16 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class NeonFilesApplication: Application() {
+    companion object {
+        lateinit var instance: NeonFilesApplication
+            private set
+    }
     lateinit var container: AppContainer
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     override fun onCreate() {
         super.onCreate()
         container = AppDataContainer(this)
+        instance = this
         appScope.launch {
             val homeExists = container.locationRepository.getAllLocationStream().first().any {
                 it.fsType == FsType.Local && it.path == getExternalRootPath().toString()
