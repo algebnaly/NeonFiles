@@ -93,29 +93,50 @@ class NIOContentProvider() : ContentProvider() {
     }
 
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
+        if (mode != "r") {
+            throw IllegalArgumentException("Unsupported file mode: $mode")
+        }
+
         val nioPath = uriToPath(uri)
         val pipe = ParcelFileDescriptor.createPipe()
         val readFd = pipe[0]
         val writeFd = pipe[1]
+
         Thread {
+            var inputStream: java.io.InputStream? = null
+            var outputStream: FileOutputStream? = null
+
             try {
-                Files.newInputStream(nioPath).use { inputStream ->
-                    FileOutputStream(writeFd.fileDescriptor).use { outputStream ->
-                        inputStream.copyTo(outputStream)
+                inputStream = Files.newInputStream(nioPath)
+                outputStream = FileOutputStream(writeFd.fileDescriptor)
+                inputStream.copyTo(outputStream)
+
+                Log.d("NIOContentProvider", "File transfer completed for: $uri")
+
+            } catch (e: Exception) {
+                if (e is IOException && e.message?.contains("Broken pipe") == true) {
+                    Log.w("NIOContentProvider", "Client closed pipe (Broken pipe) for: $uri")
+                } else {
+                    Log.e("NIOContentProvider", "Error during file transfer for: $uri", e)
+
+                    try {
+                        writeFd.closeWithError(e.message)
+                    } catch (closeEx: IOException) {
                     }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                throw e
             } finally {
                 try {
                     writeFd.close()
                 } catch (e: IOException) {
-                    e.printStackTrace()
-                    throw e
+                    Log.e("NIOContentProvider", "Error closing write FD.", e)
+                }
+                try {
+                    inputStream?.close()
+                } catch (e: IOException) {
                 }
             }
         }.start()
+
         return readFd
     }
 }
