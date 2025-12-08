@@ -18,6 +18,8 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
+import java.nio.channels.SeekableByteChannel
+import java.nio.channels.WritableByteChannel
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
@@ -110,19 +112,14 @@ class NIOContentProvider() : ContentProvider() {
         val writeFd = pipe[1]
 
         Thread {
-            var inputChannel: FileChannel? = null
-            var outputChannel: FileChannel? = null
+            var inputChannel: SeekableByteChannel? = null
+            var outputChannel: WritableByteChannel? = null
             val buffer = ByteBuffer.allocateDirect(1024 * 1024)
 
             try {
-                inputChannel = FileChannel.open(
-                    nioPath,
-                    StandardOpenOption.READ
-                )
-
+                inputChannel = nioPath.fileSystem.provider().newByteChannel(nioPath, setOf(StandardOpenOption.READ))
                 val fileOutputStream = FileOutputStream(writeFd.fileDescriptor)
-                outputChannel = Channels.newChannel(fileOutputStream) as? FileChannel
-
+                outputChannel = Channels.newChannel(fileOutputStream)
                 var bytesRead: Int
                 while (true) {
                     bytesRead = inputChannel.read(buffer)
@@ -135,23 +132,25 @@ class NIOContentProvider() : ContentProvider() {
                 }
             } catch (e: Exception) {
                 if (e is IOException && e.message?.contains("Broken pipe") == true) {
-                    Log.w("NIOContentProvider", "Client closed pipe (Broken pipe) for: $uri")
+                    Log.d("neonFilesDebug", "Client closed pipe (Broken pipe) for: $uri")
                 } else {
-                    Log.e("NIOContentProvider", "Error during file transfer for: $uri", e)
                     try {
-                        writeFd.closeWithError(e.message)
+                        val errorMessage = e.message ?: "Unknown I/O error during transfer."
+                        writeFd.closeWithError(errorMessage)
                     } catch (closeEx: IOException) {
+                        Log.d("neonFilesDebug", closeEx.toString())
                     }
                 }
             } finally {
                 try {
                     writeFd.close()
                 } catch (e: IOException) {
-                    Log.e("NIOContentProvider", "Error closing write FD.", e)
+                    Log.e("neonFilesDebug", "Error closing write FD.", e)
                 }
                 try {
                     inputChannel?.close()
                 } catch (e: IOException) {
+                    Log.e("neonFilesDebug", "Error closing inputChannel.", e)
                 }
             }
         }.start()
