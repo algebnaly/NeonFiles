@@ -38,16 +38,11 @@ import java.util.stream.Collectors
 import kotlin.use
 
 @Composable
-fun FileListView(viewState: MainViewModel, progressViewModel: ProgressViewModel) {
-
-    val imageLoader = ImageLoader.Builder(LocalContext.current).components {
-        add(NioPathFetcher.Factory())
-    }.build()
-
-    val videoFrameLoader = ImageLoader.Builder(LocalContext.current).components {
-        add(NioPathFetcher.Factory())
-        add(VideoFrameDecoder.Factory())
-    }.build()
+fun FileListView(
+    viewState: MainViewModel,
+    progressViewModel: ProgressViewModel,
+    imageLoader: ImageLoader
+) {
 
     val operationMode by viewState.operationMode.collectAsState()
 
@@ -66,13 +61,14 @@ fun FileListView(viewState: MainViewModel, progressViewModel: ProgressViewModel)
                     bottom = lazyColumnBottomPadding
                 ),
             ) {
-                items(filteredList,
+                items(
+                    filteredList,
                     key = { item -> item.uniqueKey }
-                    ) { item ->
+                ) { item ->
                     if (operationMode == OperationMode.Select)
-                        SelectModeFileItemCard(item, viewState, imageLoader, videoFrameLoader)
+                        SelectModeFileItemCard(item, viewState, imageLoader)
                     else {
-                        ListItemCard(item = item, viewState, imageLoader, videoFrameLoader)
+                        ListItemCard(item = item, viewState, imageLoader)
                     }
                 }
             }

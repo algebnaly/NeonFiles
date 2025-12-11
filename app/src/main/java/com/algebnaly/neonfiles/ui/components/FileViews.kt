@@ -41,7 +41,7 @@ import com.algebnaly.neonfiles.ui.PathViewState
 import com.algebnaly.neonfiles.ui.utils.NioPathFetcher
 
 @Composable
-fun FileView(file: PathViewState, imageLoader: ImageLoader, videoFrameLoader: ImageLoader) {
+fun FileView(file: PathViewState, imageLoader: ImageLoader) {
     if (file.isDirectory) {
         Icon(
             Icons.Filled.Folder,
@@ -51,13 +51,15 @@ fun FileView(file: PathViewState, imageLoader: ImageLoader, videoFrameLoader: Im
                 .padding(start = 11.dp, end = 12.dp),
         )
     } else {
+        val imageRequest =
+            ImageRequest.Builder(LocalContext.current).data(file.path).size(128).build()
         val iconModifier = Modifier
             .size(64.dp)
             .padding(start = 12.dp, end = 12.dp)
         val mime = file.mimeType
         if (isImage(mime)) {
             AsyncImage(
-                model = file.path,
+                model = imageRequest,
                 contentDescription = "image file",
                 imageLoader = imageLoader,
                 modifier = iconModifier
@@ -72,6 +74,7 @@ fun FileView(file: PathViewState, imageLoader: ImageLoader, videoFrameLoader: Im
         } else if (isVideo(mime)) {
             val videoFrameRequest = ImageRequest.Builder(LocalContext.current)
                 .data(file.path)
+                .size(128) // TODO: set correct size
                 .videoFrameMillis(1000)
                 .build()
             if (file.path.fileSystem.provider().scheme != "file") {
@@ -84,7 +87,7 @@ fun FileView(file: PathViewState, imageLoader: ImageLoader, videoFrameLoader: Im
                 AsyncImage(
                     model = videoFrameRequest,
                     contentDescription = "video file",
-                    imageLoader = videoFrameLoader,
+                    imageLoader = imageLoader,
                     modifier = iconModifier
                 )
             }

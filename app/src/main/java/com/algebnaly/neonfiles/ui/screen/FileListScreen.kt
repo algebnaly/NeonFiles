@@ -52,15 +52,25 @@ import java.nio.file.Path
 import kotlin.io.path.isDirectory
 import androidx.core.net.toUri
 import coil3.ImageLoader
+import coil3.video.VideoFrameDecoder
+import com.algebnaly.neonfiles.ui.utils.NioPathFetcher
 import com.algebnaly.neonfiles.utils.startApkInstallationIntent
 
 @Composable
 fun FileListScreen(viewState: MainViewModel, progressViewModel: ProgressViewModel) {
+    val context = LocalContext.current
+    val imageLoader = remember {
+        ImageLoader.Builder(context)
+            .components {
+                add(NioPathFetcher.Factory())
+                add(VideoFrameDecoder.Factory())
+            }
+            .build()
+    }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val currentPath by viewState.currentPath.collectAsState()
     val operationMode by viewState.operationMode.collectAsState()
-    val context = LocalContext.current
     BackHandler(enabled = true) {
         handleBackPress(
             drawerState = drawerState,
@@ -74,11 +84,11 @@ fun FileListScreen(viewState: MainViewModel, progressViewModel: ProgressViewMode
             context = context
         )
     }
-    FileListView(viewState = viewState, progressViewModel = progressViewModel)
+    FileListView(viewState = viewState, progressViewModel = progressViewModel, imageLoader)
 }
 
 @Composable
-fun SelectModeFileItemCard(file: PathViewState, viewState: MainViewModel, imageLoader: ImageLoader, videoFrameLoader: ImageLoader) {
+fun SelectModeFileItemCard(file: PathViewState, viewState: MainViewModel, imageLoader: ImageLoader) {
     val selectedPathSet by viewState.selectedPathSet.collectAsState()
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -100,14 +110,14 @@ fun SelectModeFileItemCard(file: PathViewState, viewState: MainViewModel, imageL
     )
     {
         SelectableFileView(selected = selectedPathSet.contains(file.path)) {
-            FileView(file, imageLoader, videoFrameLoader)
+            FileView(file, imageLoader)
         }
         Text(text = file.name)
     }
 }
 
 @Composable
-fun ListItemCard(item: PathViewState, viewState: MainViewModel, imageLoader: ImageLoader, videoFrameLoader: ImageLoader) {
+fun ListItemCard(item: PathViewState, viewState: MainViewModel, imageLoader: ImageLoader) {
     val context = LocalContext.current
 
     val fileToInstall = remember { mutableStateOf<PathViewState?>(null) }
@@ -163,7 +173,7 @@ fun ListItemCard(item: PathViewState, viewState: MainViewModel, imageLoader: Ima
                     viewState.operationMode.value = OperationMode.Select
                 })
     ) {
-        FileView(item, imageLoader, videoFrameLoader)
+        FileView(item, imageLoader)
         Text(text = item.name)
     }
 }
