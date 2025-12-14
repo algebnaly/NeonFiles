@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -53,6 +54,8 @@ import kotlin.io.path.isDirectory
 import androidx.core.net.toUri
 import coil3.ImageLoader
 import coil3.video.VideoFrameDecoder
+import com.algebnaly.neonfiles.filesystem.utils.isText
+import com.algebnaly.neonfiles.filesystem.utils.isVideo
 import com.algebnaly.neonfiles.ui.utils.NioPathFetcher
 import com.algebnaly.neonfiles.utils.startApkInstallationIntent
 
@@ -88,7 +91,11 @@ fun FileListScreen(viewState: MainViewModel, progressViewModel: ProgressViewMode
 }
 
 @Composable
-fun SelectModeFileItemCard(file: PathViewState, viewState: MainViewModel, imageLoader: ImageLoader) {
+fun SelectModeFileItemCard(
+    file: PathViewState,
+    viewState: MainViewModel,
+    imageLoader: ImageLoader
+) {
     val selectedPathSet by viewState.selectedPathSet.collectAsState()
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -141,19 +148,8 @@ fun ListItemCard(item: PathViewState, viewState: MainViewModel, imageLoader: Ima
                     if (item.isDirectory) {
                         viewState.currentPath.value = item.path
                     } else {
-                        val mimeType = item.mimeType
-                        if (isImage(mimeType)) {
-                            val uri = item.path.toContentUri()
-                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(uri, "image/*")
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            try {
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
-                        } else if (isApkFile(mimeType)) {
+                        var mimeType = item.mimeType
+                        if (isApkFile(mimeType)) {
                             if (!context.packageManager.canRequestPackageInstalls()) {
                                 fileToInstall.value = item
                                 val permissionIntent =
@@ -163,6 +159,20 @@ fun ListItemCard(item: PathViewState, viewState: MainViewModel, imageLoader: Ima
                                 installPermissionLauncher.launch(permissionIntent)
                             } else {
                                 startApkInstallationIntent(context, item.path)
+                            }
+                        } else {
+                            val uri = item.path.toContentUri()
+                            if (mimeType == "") {
+                                mimeType = "*/*"
+                            }
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(uri, mimeType)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            try {
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
                             }
                         }
                     }

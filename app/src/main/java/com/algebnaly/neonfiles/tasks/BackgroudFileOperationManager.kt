@@ -118,10 +118,12 @@ class BackgroundFileOperationManager(
                 for (f in fileSet) {
                     f.deleteRecursively()
                 }
-                _eventFlow.emit(BackgroundFileOperationManagerInfo.Ok(
-                    type = OperationType.Delete,
-                    message = summary(fileSet)
-                ))
+                _eventFlow.emit(
+                    BackgroundFileOperationManagerInfo.Ok(
+                        type = OperationType.Delete,
+                        message = summary(fileSet)
+                    )
+                )
             } catch (e: Exception) {
                 _eventFlow.emit(
                     BackgroundFileOperationManagerInfo.Err(
@@ -236,7 +238,12 @@ suspend fun copyRecursivelySimple(
             for (child in stream) {
                 ensureActive()
                 try {
-                    copyRecursivelySimple(child, newTarget, onProgress = onProgress, onError = onError)
+                    copyRecursivelySimple(
+                        child,
+                        newTarget,
+                        onProgress = onProgress,
+                        onError = onError
+                    )
                 } catch (e: Exception) {
                     when (onError(child, newTarget, e)) {
                         CopyOnErrorOperation.Terminate -> return@withContext
@@ -304,7 +311,7 @@ suspend fun copyStreamLike(
 }
 
 fun summary(fileSet: Set<Path>): String {
-    return when(fileSet.size) {
+    return when (fileSet.size) {
         0 -> ""
         1 -> fileSet.first().name
         else -> fileSet.first().name + "..."

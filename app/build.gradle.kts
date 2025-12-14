@@ -112,7 +112,7 @@ val buildNFSCrsLib by tasks.registering(Exec::class) {
         "cargo", "ndk"
     ) + abiList.flatMap { listOf("-t", it) } + listOf(
         "-o", "$projectDir/src/main/jniLibs",
-        "build",
+        "build", "--release",
     )
     environment("ANDROID_NDK_HOME", ndkPath)
     environment("RUSTFLAGS", rustFlags)
