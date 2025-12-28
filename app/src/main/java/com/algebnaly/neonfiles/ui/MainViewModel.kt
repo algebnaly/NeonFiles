@@ -34,8 +34,14 @@ enum class OperationMode {
     Cut
 }
 
+class LoadState{
+    var loading: Boolean = false
+    var path: String = ""
+}
+
 class MainViewModel(val initialPath: Path, val fsProvider: FsProvider, val fileOperationManager: BackgroundFileOperationManager) : ViewModel() {
     val currentPath: MutableStateFlow<Path> = MutableStateFlow(initialPath)
+    val loadState: LoadState = LoadState()
 
     private val _fileItems = MutableStateFlow<List<PathViewState>>(emptyList())
     val fileItems: StateFlow<List<PathViewState>> = _fileItems.asStateFlow()

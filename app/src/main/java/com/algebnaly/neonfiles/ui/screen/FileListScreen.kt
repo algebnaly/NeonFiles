@@ -160,7 +160,7 @@ fun ListItemCard(item: PathViewState, viewState: MainViewModel, imageLoader: Ima
                             } else {
                                 startApkInstallationIntent(context, item.path)
                             }
-                        } else {
+                        } else {//TODO: play video files
                             val uri = item.path.toContentUri()
                             if (mimeType == "") {
                                 mimeType = "*/*"
