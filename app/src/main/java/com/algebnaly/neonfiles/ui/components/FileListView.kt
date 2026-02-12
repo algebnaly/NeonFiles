@@ -10,10 +10,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -45,6 +51,7 @@ fun FileListView(
 ) {
 
     val operationMode by viewState.operationMode.collectAsState()
+    val isLoading by viewState.isLoading.collectAsState()
 
     val itemsList: List<PathViewState> by viewState.fileItems.collectAsState()
     val filteredList = itemsList.filter { !it.name.startsWith(".") }
@@ -55,7 +62,21 @@ fun FileListView(
         if (operationMode != OperationMode.Browser) bottomMenuHeight + 12.dp else 12.dp
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (filteredList.isNotEmpty()) {
+        if (isLoading) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("正在连接...")
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(onClick = { viewState.cancelLoading() }) {
+                    Text("取消")
+                }
+            }
+        } else if (filteredList.isNotEmpty()) {
             LazyColumn(
                 contentPadding = PaddingValues(
                     bottom = lazyColumnBottomPadding
