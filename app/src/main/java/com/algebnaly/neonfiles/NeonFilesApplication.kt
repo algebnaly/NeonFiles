@@ -21,12 +21,16 @@ class NeonFilesApplication: Application() {
         lateinit var instance: NeonFilesApplication
             private set
     }
-    lateinit var container: AppContainer
+    
+    val container: AppContainer by lazy { AppDataContainer(this) }
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    
+    init {
+        instance = this
+    }
+
     override fun onCreate() {
         super.onCreate()
-        container = AppDataContainer(this)
-        instance = this
         appScope.launch {
             val homeExists = container.locationRepository.getAllLocationStream().first().any {
                 it.fsType == FsType.Local && it.path == getExternalRootPath().toString()

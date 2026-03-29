@@ -36,8 +36,15 @@ class NIOContentProvider() : ContentProvider() {
         TODO("Not yet implemented")
     }
 
-    override fun getType(p0: Uri): String? {
-        TODO("Not yet implemented")
+    override fun getType(uri: Uri): String? {
+        return try {
+            val fileName = uri.lastPathSegment ?: return "application/octet-stream"
+            val extension = android.webkit.MimeTypeMap.getFileExtensionFromUrl(fileName)
+            android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.lowercase()) ?: "application/octet-stream"
+        } catch (e: Exception) {
+            Log.d("neonFiles", e.toString())
+            "application/octet-stream"
+        }
     }
 
     override fun insert(p0: Uri, p1: ContentValues?): Uri? {
@@ -101,60 +108,64 @@ class NIOContentProvider() : ContentProvider() {
         TODO("Not yet implemented")
     }
 
+    private var handlerThread: android.os.HandlerThread? = null
+    private var backgroundHandler: android.os.Handler? = null
+
+    private fun getBackgroundHandler(): android.os.Handler {
+        if (backgroundHandler == null) {
+            synchronized(this) {
+                if (backgroundHandler == null) {
+                    val thread = android.os.HandlerThread("NIOProvider-ProxyHandler").apply { start() }
+                    handlerThread = thread
+                    backgroundHandler = android.os.Handler(thread.looper)
+                }
+            }
+        }
+        return backgroundHandler!!
+    }
+
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
         if (mode != "r") {
             throw IllegalArgumentException("Unsupported file mode: $mode")
         }
 
         val nioPath = uriToPath(uri)
-        val pipe = ParcelFileDescriptor.createPipe()
-        val readFd = pipe[0]
-        val writeFd = pipe[1]
+        
+        if (nioPath.fileSystem == java.nio.file.FileSystems.getDefault()) {
+            return ParcelFileDescriptor.open(nioPath.toFile(), ParcelFileDescriptor.MODE_READ_ONLY)
+        }
 
-        Thread {
-            var inputChannel: SeekableByteChannel? = null
-            var outputChannel: WritableByteChannel? = null
-            val buffer = ByteBuffer.allocateDirect(1024 * 1024)
+        val storageManager = context?.getSystemService(android.os.storage.StorageManager::class.java)
 
-            try {
-                inputChannel = nioPath.fileSystem.provider().newByteChannel(nioPath, setOf(StandardOpenOption.READ))
-                val fileOutputStream = FileOutputStream(writeFd.fileDescriptor)
-                outputChannel = Channels.newChannel(fileOutputStream)
-                var bytesRead: Int
-                while (true) {
-                    bytesRead = inputChannel.read(buffer)
-                    if (bytesRead <= 0) break
-                    buffer.flip()
-                    while (buffer.hasRemaining()) {
-                        outputChannel!!.write(buffer)
+        if (storageManager != null) {
+            val channel = nioPath.fileSystem.provider().newByteChannel(nioPath, setOf(StandardOpenOption.READ))
+            return storageManager.openProxyFileDescriptor(
+                ParcelFileDescriptor.MODE_READ_ONLY,
+                object : android.os.ProxyFileDescriptorCallback() {
+                    override fun onGetSize(): Long {
+                        return Files.size(nioPath)
                     }
-                    buffer.clear()
-                }
-            } catch (e: Exception) {
-                if (e is IOException && e.message?.contains("Broken pipe") == true) {
-                    Log.d("neonFilesDebug", "Client closed pipe (Broken pipe) for: $uri")
-                } else {
-                    try {
-                        val errorMessage = e.message ?: "Unknown I/O error during transfer."
-                        writeFd.closeWithError(errorMessage)
-                    } catch (closeEx: IOException) {
-                        Log.d("neonFilesDebug", closeEx.toString())
-                    }
-                }
-            } finally {
-                try {
-                    writeFd.close()
-                } catch (e: IOException) {
-                    Log.e("neonFilesDebug", "Error closing write FD.", e)
-                }
-                try {
-                    inputChannel?.close()
-                } catch (e: IOException) {
-                    Log.e("neonFilesDebug", "Error closing inputChannel.", e)
-                }
-            }
-        }.start()
 
-        return readFd
+                    override fun onRead(offset: Long, size: Int, data: ByteArray): Int {
+                        var totalRead = 0
+                        channel.position(offset)
+                        while (totalRead < size) {
+                            val buffer = ByteBuffer.wrap(data, totalRead, size - totalRead)
+                            val bytesRead = channel.read(buffer)
+                            if (bytesRead < 0) break
+                            totalRead += bytesRead
+                        }
+                        return totalRead
+                    }
+
+                    override fun onRelease() {
+                        channel.close()
+                    }
+                },
+                getBackgroundHandler()
+            )
+        } else {
+            throw IllegalStateException("StorageManager not available or Android version too low")
+        }
     }
 }

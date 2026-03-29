@@ -1,7 +1,7 @@
 package com.algebnaly.neonfiles.ui.components
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +20,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.style.TextOverflow
@@ -34,6 +35,7 @@ import com.algebnaly.neonfiles.ui.components.location.NewLocationButton
 fun DrawerContentView(
     onCloseDrawer: () -> Unit,
     onAddLocation: () -> Unit,
+    onEditLocation: (Int) -> Unit,
     drawerContentViewModel: DrawerContentViewModel = viewModel(
         factory = AppViewModelProvider.Factory
     ),
@@ -50,10 +52,16 @@ fun DrawerContentView(
         LazyColumn {
             items(uiState.locations) { item ->
                     Row {
-                        Box (modifier = Modifier.weight(1f).clickable{
-                            mainViewModel.loadLocationItemAndSwitch(item)
-                            onCloseDrawer()
-                        }, contentAlignment = Alignment.Center){
+                        Box (modifier = Modifier.weight(1f).combinedClickable(
+                            onClick = {
+                                mainViewModel.loadLocationItemAndSwitch(item)
+                                onCloseDrawer()
+                            },
+                            onLongClick = {
+                                onEditLocation(item.id)
+                                onCloseDrawer()
+                            }
+                        ), contentAlignment = Alignment.Center){
                             Text(
                                 fontSize = 5.em,
                                 text = item.name,
@@ -65,7 +73,13 @@ fun DrawerContentView(
                     Icon(
                         imageVector = Icons.Default.MoreHoriz,
                         contentDescription = "More",
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).size(24.dp)
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .size(24.dp)
+                            .clickable {
+                                onEditLocation(item.id)
+                                onCloseDrawer()
+                            }
                     )
                 }
             }

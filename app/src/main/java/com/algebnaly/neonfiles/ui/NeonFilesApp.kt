@@ -32,12 +32,16 @@ import com.algebnaly.neonfiles.ui.components.DrawerContentView
 import com.algebnaly.neonfiles.ui.components.ProgressViewModel
 import com.algebnaly.neonfiles.ui.screen.FileListScreen
 import com.algebnaly.neonfiles.ui.screen.NFS4AddLocationScreen
+import com.algebnaly.neonfiles.ui.screen.NFS4EditLocationScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 enum class NeonFilesScreen() {
     FileListScreen,
-    NFS4AddLocationScreen
+    NFS4AddLocationScreen,
+    NFS4EditLocationScreen
 }
 
 @Composable
@@ -58,6 +62,14 @@ fun NeonFilesNavHost(
         }
         composable(route = NeonFilesScreen.NFS4AddLocationScreen.name) {
             NFS4AddLocationScreen(onBack = {
+                navController.popBackStack()
+            })
+        }
+        composable(
+            route = "${NeonFilesScreen.NFS4EditLocationScreen.name}/{locationId}",
+            arguments = listOf(navArgument("locationId") { type = NavType.IntType })
+        ) {
+            NFS4EditLocationScreen(onBack = {
                 navController.popBackStack()
             })
         }
@@ -130,6 +142,9 @@ fun NeonFilesApp(mainViewModel: MainViewModel = viewModel(factory = AppViewModel
                     scope.launch {
                         drawerState.close()
                     }
+                },
+                onEditLocation = { locationId ->
+                    navController.navigate("${NeonFilesScreen.NFS4EditLocationScreen.name}/$locationId")
                 }
             )
         }

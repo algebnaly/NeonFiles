@@ -31,10 +31,12 @@ fun uriToPath(uri: Uri): Path {
         "nfs4" -> {
             try {
                 fsProvider.nfs4FileSystemProvider.getPath(trueUri)
-            }catch (e: FileSystemNotFoundException){
-                throw e
-            }catch (e: Exception){
-                throw e
+            } catch (e: FileSystemNotFoundException) {
+                // The Android process was likely restarted by system specifically to handle a
+                // ContentProvider openFile request. Thus, connections aren't opened yet.
+                // We create a new filesystem with the host URI before trying to getPath again!
+                fsProvider.nfs4FileSystemProvider.newFileSystem(trueUri, emptyMap<String, Any>())
+                fsProvider.nfs4FileSystemProvider.getPath(trueUri)
             }
         }
         else -> TODO("Not implemented")
@@ -72,7 +74,10 @@ fun extractTrueURI(encodedUri: Uri): URI? {
         return null
     }
 
-    val decodedPath = URLDecoder.decode(externalPath.substring(1), StandardCharsets.UTF_8.name())
-
-    return URI(decodedPath)
+    // externalPath is decoded by `Uri.path`, which means it accurately represents the original
+    // string passed to `appendPath` during `toContentUri`. Since `toContentUri` passes
+    // `Path.toUri().toString()`, the string is already a properly RFC2396 encoded URI string
+    // (e.g., "nfs4://ip/my%20file"). URLDecoder.decode would mistakenly decode `%20` to space,
+    // causing URISyntaxException below.
+    return URI(externalPath.substring(1))
 }
