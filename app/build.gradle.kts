@@ -1,3 +1,4 @@
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -10,13 +11,28 @@ plugins {
 
 val supportedAbiList = listOf("arm64-v8a", "x86_64")
 
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+
+val keystoreProperties = Properties().apply {
+    require(keystorePropertiesFile.isFile) {
+        "Missing signing configuration: ${keystorePropertiesFile.absolutePath}"
+    }
+
+    keystorePropertiesFile.inputStream().use {
+        load(it)
+    }
+}
+
 android {
     namespace = "com.algebnaly.neonfiles"
+    //noinspection GradleDependency
     compileSdk = 36
+    ndkVersion = "27.3.13750724"
 
     defaultConfig {
         applicationId = "com.algebnaly.neonfiles"
         minSdk = 33
+        //noinspection OldTargetApi
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -26,12 +42,29 @@ android {
             //noinspection ChromeOsAbiSupport
             abiFilters += supportedAbiList
         }
-        ndkVersion = "27.3.13750724"
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = rootProject.file(
+                keystoreProperties.getProperty("storeFile")
+            )
+            storePassword = keystoreProperties.getProperty("storePassword")
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+            enableV4Signing = true
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
+
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
