@@ -8,7 +8,7 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-val abiList = listOf("arm64-v8a", "x86_64")
+val supportedAbiList = listOf("arm64-v8a", "x86_64")
 
 android {
     namespace = "com.algebnaly.neonfiles"
@@ -24,7 +24,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             //noinspection ChromeOsAbiSupport
-            abiFilters += abiList
+            abiFilters += supportedAbiList
         }
         ndkVersion = "27.3.13750724"
     }
@@ -38,12 +38,21 @@ android {
             )
         }
 
-        register("staging"){
+        register("staging") {
             initWith(getByName("release"))
             isDebuggable = false
             isJniDebuggable = false
             isMinifyEnabled = false
             versionNameSuffix = "-STAGING"
+            signingConfig = signingConfigs.getByName("debug")
+        }
+
+        register("prebuilt") {
+            initWith(getByName("release"))
+            // Use the checked-in libraries from src/main/jniLibs instead of
+            // rebuilding the native project, which may be temporarily broken.
+            matchingFallbacks += listOf("release")
+            versionNameSuffix = "-PREBUILT"
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -58,6 +67,31 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+}
+
+val nfscrsJniLibProjectPath = "../../../rust/nfscrs_jni/"
+val ndkPath: String = android.ndkDirectory.absolutePath
+
+androidComponents {
+    onVariants { variant ->
+        if (variant.buildType in listOf("debug", "release", "staging")) {
+            val taskName = "buildRustJni${variant.name.replaceFirstChar { it.uppercase() }}"
+            val buildRustJni = tasks.register<BuildRustJniTask>(taskName) {
+                description = "build nfscrs native lib"
+                jniCrateSrc.set(layout.projectDirectory.dir(nfscrsJniLibProjectPath).dir("src"))
+                abiList.set(supportedAbiList)
+                ndkHome.set(ndkPath)
+                rustFlags.set("")
+                outputDirectory.set(layout.buildDirectory.dir("generated/rustJni/${variant.name}"))
+            }
+            variant.sources.jniLibs?.addGeneratedSourceDirectory(
+                buildRustJni,
+                BuildRustJniTask::outputDirectory
+            )
+        } else if (variant.buildType == "prebuilt") {
+            variant.sources.jniLibs?.addStaticSourceDirectory("src/main/prebuiltLibs")
+        }
     }
 }
 
@@ -84,36 +118,7 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-}
-
-
-val nfscfsJniLibProjectPath = "../../../rust/nfscrs_jni/"
-val nfscrsProjectPath = "../../../rust/nfscrs/"
-val jniStorePath = layout.projectDirectory.dir("src/main/jniLibs")
-val ndkPath: String = android.ndkDirectory.absolutePath
-
-val rustFlags = "-Clink-arg=-Wl,-z,max-page-size=0x4000"
-
-
-tasks.named("preBuild") {
-    dependsOn(buildNFSCrsLib)
-}
-
-val buildNFSCrsLib by tasks.registering(Exec::class) {
-    inputs.dir("$nfscfsJniLibProjectPath/src")
-    inputs.dir("$nfscrsProjectPath/src")
-    outputs.dir(jniStorePath)
-    workingDir = File(nfscfsJniLibProjectPath)
-    commandLine = listOf(
-        "cargo", "ndk"
-    ) + abiList.flatMap { listOf("-t", it) } + listOf(
-        "-o", "$projectDir/src/main/jniLibs",
-        "build", "--release",
-    )
-    environment("ANDROID_NDK_HOME", ndkPath)
-    environment("RUSTFLAGS", rustFlags)
 }
