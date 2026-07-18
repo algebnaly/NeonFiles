@@ -11,16 +11,16 @@ import com.algebnaly.neonfiles.filesystem.utils.FsTypeConverter
 
 @Database(entities = [LocationItem::class], version = 1, exportSchema = false)
 @TypeConverters(FsTypeConverter::class, FsConfigConverter::class)
-abstract class LocationDataBase: RoomDatabase() {
+abstract class LocationDatabase: RoomDatabase() {
     abstract fun locationItemDao(): LocationItemDao
 
     companion object {
         @Volatile
-        private var Instance: LocationDataBase? = null
+        private var Instance: LocationDatabase? = null
 
-        fun getDatabase(context: Context): LocationDataBase {
+        fun getDatabase(context: Context): LocationDatabase {
             return Instance ?: synchronized(this) {
-                Room.databaseBuilder(context, LocationDataBase::class.java, "location_database")
+                Room.databaseBuilder(context, LocationDatabase::class.java, "location_database")
                     .fallbackToDestructiveMigration(false)
                     .build()
                     .also {

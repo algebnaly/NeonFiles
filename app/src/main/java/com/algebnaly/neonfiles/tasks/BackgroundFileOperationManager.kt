@@ -1,6 +1,5 @@
 package com.algebnaly.neonfiles.tasks
 
-import android.util.Log
 import com.algebnaly.neonfiles.filesystem.utils.CopyOnErrorOperation
 import com.algebnaly.neonfiles.filesystem.utils.isDirectorySafe
 import kotlinx.coroutines.CancellationException
@@ -13,14 +12,12 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
-import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.UUID
 import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.OnErrorResult
 import kotlin.io.path.absolute
 import kotlin.io.path.copyToRecursively
 import kotlin.io.path.deleteRecursively

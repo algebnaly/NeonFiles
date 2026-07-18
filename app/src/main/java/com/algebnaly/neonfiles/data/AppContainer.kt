@@ -22,7 +22,7 @@ interface AppContainer {
  */
 class AppDataContainer(private val context: Context) : AppContainer {
     override val locationRepository: LocationRepository by lazy {
-        LocationRepository(LocationDataBase.getDatabase(context).locationItemDao())
+        LocationRepository(LocationDatabase.getDatabase(context).locationItemDao())
     }
     override val fsProvider: FsProvider = FsProvider()
 

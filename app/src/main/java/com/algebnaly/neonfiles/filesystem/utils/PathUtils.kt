@@ -5,7 +5,7 @@ import android.util.Log
 import com.algebnaly.neonfiles.NeonFilesApplication
 import com.algebnaly.neonfiles.data.AppContainer
 import com.algebnaly.neonfiles.filesystem.FsProvider
-import com.algebnaly.neonfiles.ui.NeonFilesAuthority
+import com.algebnaly.neonfiles.platform.content.NeonFilesAuthority
 import com.algebnaly.nfs4c.NFS4FileSystemProvider
 import java.io.File
 import java.net.URI

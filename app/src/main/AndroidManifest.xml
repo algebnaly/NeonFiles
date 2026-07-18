@@ -30,7 +30,7 @@
         </activity>
         <provider
             android:authorities="com.algebnaly.nfs4c.provider"
-            android:name=".ui.NIOContentProvider"
+            android:name=".ui.NioContentProvider"
             android:exported="true"
             android:grantUriPermissions="true"
             >

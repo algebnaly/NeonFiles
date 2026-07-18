@@ -39,7 +39,7 @@ import com.algebnaly.neonfiles.filesystem.utils.isImage
 import com.algebnaly.neonfiles.filesystem.utils.toContentUri
 import com.algebnaly.neonfiles.filesystem.utils.toContentUriString
 import com.algebnaly.neonfiles.ui.MainViewModel
-import com.algebnaly.neonfiles.ui.NeonFilesAuthority
+import com.algebnaly.neonfiles.platform.content.NeonFilesAuthority
 import com.algebnaly.neonfiles.ui.OperationMode
 import com.algebnaly.neonfiles.ui.PathViewState
 import com.algebnaly.neonfiles.ui.components.FileListView
