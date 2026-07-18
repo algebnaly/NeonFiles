@@ -12,15 +12,11 @@ plugins {
 val supportedAbiList = listOf("arm64-v8a", "x86_64")
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+val hasReleaseSigning = keystorePropertiesFile.isFile
 
-val keystoreProperties = Properties().apply {
-    require(keystorePropertiesFile.isFile) {
-        "Missing signing configuration: ${keystorePropertiesFile.absolutePath}"
-    }
-
-    keystorePropertiesFile.inputStream().use {
-        load(it)
-    }
+if (hasReleaseSigning) {
+    keystorePropertiesFile.inputStream().use(keystoreProperties::load)
 }
 
 android {
@@ -45,6 +41,7 @@ android {
     }
 
     signingConfigs {
+        if(hasReleaseSigning){
         create("release") {
             storeFile = rootProject.file(
                 keystoreProperties.getProperty("storeFile")
@@ -58,12 +55,15 @@ android {
             enableV3Signing = true
             enableV4Signing = true
         }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            if(hasReleaseSigning){
+                signingConfig = signingConfigs.getByName("release")
+            }
 
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
