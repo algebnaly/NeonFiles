@@ -200,15 +200,14 @@ fun isSubDirectory(src: Path, dst: Path, includeSelf: Boolean = true): Boolean {
     if (src.fileSystem != dst.fileSystem) {
         return false
     }
-    val srcPathStr = src.absolute().toString().trimEnd(src.fileSystem.separator.single())
-    val dstPathStr = dst.absolute().toString().trimEnd(dst.fileSystem.separator.single())
+    val source = src.toAbsolutePath().normalize()
+    val target = dst.toAbsolutePath().normalize()
 
-    if (dstPathStr.startsWith(srcPathStr)) {
-        if (dstPathStr.length == srcPathStr.length) {
-            return includeSelf
-        }
-    }
-    return false
+    println(source)
+    println(dst)
+
+    return target.startsWith(source) &&
+            (includeSelf || target != source)
 }
 
 suspend fun copyRecursivelySimple(
