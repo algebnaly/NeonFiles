@@ -1,17 +1,10 @@
 package com.algebnaly.neonfiles.ui
 
-import android.util.Log
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import coil3.ImageLoader
-import coil3.video.VideoFrameDecoder
-import com.algebnaly.neonfiles.data.LocationItem
-import com.algebnaly.neonfiles.filesystem.FsProvider
-import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
-import com.algebnaly.neonfiles.filesystem.utils.getMimeType
+import com.algebnaly.neonfiles.core.filesystem.StorageConnector
+import com.algebnaly.neonfiles.core.model.StorageLocation
 import com.algebnaly.neonfiles.tasks.BackgroundFileOperationManager
-import com.algebnaly.neonfiles.ui.utils.NioPathFetcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -21,7 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
@@ -37,7 +29,7 @@ enum class OperationMode {
     Cut
 }
 
-class MainViewModel(val initialPath: Path, val fsProvider: FsProvider, val fileOperationManager: BackgroundFileOperationManager) : ViewModel() {
+class MainViewModel(val initialPath: Path, val storageConnector: StorageConnector, val fileOperationManager: BackgroundFileOperationManager) : ViewModel() {
     val currentPath: MutableStateFlow<Path> = MutableStateFlow(initialPath)
 
     private val _isLoading = MutableStateFlow(false)
@@ -80,7 +72,7 @@ class MainViewModel(val initialPath: Path, val fsProvider: FsProvider, val fileO
         _refreshTrigger.update { it + 1 }
     }
 
-    fun loadLocationItemAndSwitch(item: LocationItem) {
+    fun openLocation(location: StorageLocation){
         locationLoadJob?.cancel()
 
         savedPath = currentPath.value
@@ -89,10 +81,7 @@ class MainViewModel(val initialPath: Path, val fsProvider: FsProvider, val fileO
         locationLoadJob = viewModelScope.launch {
             _isLoading.value = true
             try {
-                val path = withContext(Dispatchers.IO) {
-                    item.toPath(fsProvider)
-                }
-                currentPath.value = path
+                val path = storageConnector.connect(location)
                 // loadFileListSuspend 会被 combine flow 触发，完成后会设置 _isLoading = false
             } catch (e: Exception) {
                 ensureActive()

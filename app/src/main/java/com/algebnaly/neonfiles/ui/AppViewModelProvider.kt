@@ -17,7 +17,6 @@ object AppViewModelProvider {
         initializer {
             DrawerContentViewModel(
                 neonFilesApplication().container.locationRepository,
-                neonFilesApplication().container.fsProvider
             )
         }
         initializer {
@@ -30,7 +29,7 @@ object AppViewModelProvider {
             )
         }
         initializer {
-            MainViewModel(initialPath = getExternalRootPath() ,fsProvider = neonFilesApplication().container.fsProvider, neonFilesApplication().container.fileOperationManager)
+            MainViewModel(initialPath = getExternalRootPath() ,neonFilesApplication().container.storageConnector, neonFilesApplication().container.fileOperationManager)
         }
         initializer {
             ProgressViewModel(neonFilesApplication().container.fileOperationManager)

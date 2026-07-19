@@ -50,21 +50,21 @@ fun DrawerContentView(
     val uiState by drawerContentViewModel.uiState.collectAsState()
     ModalDrawerSheet(modifier = Modifier.width(containerWidthDp * 3 / 5)) {
         LazyColumn {
-            items(uiState.locations) { item ->
+            items(uiState.locations) { location ->
                     Row {
                         Box (modifier = Modifier.weight(1f).combinedClickable(
                             onClick = {
-                                mainViewModel.loadLocationItemAndSwitch(item)
+                                mainViewModel.openLocation(location)
                                 onCloseDrawer()
                             },
                             onLongClick = {
-                                onEditLocation(item.id)
+                                onEditLocation(location.id)
                                 onCloseDrawer()
                             }
                         ), contentAlignment = Alignment.Center){
                             Text(
                                 fontSize = 5.em,
-                                text = item.name,
+                                text = location.name,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -77,7 +77,7 @@ fun DrawerContentView(
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                             .size(24.dp)
                             .clickable {
-                                onEditLocation(item.id)
+                                onEditLocation(location.id)
                                 onCloseDrawer()
                             }
                     )

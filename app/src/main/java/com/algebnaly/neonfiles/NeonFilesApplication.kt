@@ -1,30 +1,27 @@
 package com.algebnaly.neonfiles
 
 import android.app.Application
-import android.util.Log
+import com.algebnaly.neonfiles.core.model.StorageLocation
 import com.algebnaly.neonfiles.data.AppContainer
 import com.algebnaly.neonfiles.data.AppDataContainer
-import com.algebnaly.neonfiles.data.LocationItem
-import com.algebnaly.neonfiles.filesystem.FsConfig
-import com.algebnaly.neonfiles.filesystem.FsType
+import com.algebnaly.neonfiles.filesystem.StorageConfig
 import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class NeonFilesApplication: Application() {
+class NeonFilesApplication : Application() {
     companion object {
         lateinit var instance: NeonFilesApplication
             private set
     }
-    
+
     val container: AppContainer by lazy { AppDataContainer(this) }
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    
+
     init {
         instance = this
     }
@@ -32,16 +29,17 @@ class NeonFilesApplication: Application() {
     override fun onCreate() {
         super.onCreate()
         appScope.launch {
-            val homeExists = container.locationRepository.getAllLocationStream().first().any {
-                it.fsType == FsType.Local && it.path == getExternalRootPath().toString()
+            val homeExists = container.locationRepository.observeAll().first().any {
+                it.config == StorageConfig.Local && it.path == getExternalRootPath().toString()
             }
-            if(!homeExists){
-                container.locationRepository.insertLocation(LocationItem(
-                    name = "home",
-                    fsType = FsType.Local,
-                    path = getExternalRootPath().toString(),
-                    fsConfig = FsConfig.Local
-                ))
+            if (!homeExists) {
+                container.locationRepository.save(
+                    StorageLocation(
+                        name = "home",
+                        path = getExternalRootPath().toString(),
+                        config = StorageConfig.Local
+                    )
+                )
             }
         }
     }

@@ -28,18 +28,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat.startActivityForResult
 import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
 import com.algebnaly.neonfiles.filesystem.utils.isApkFile
-import com.algebnaly.neonfiles.filesystem.utils.isDirectorySafe
-import com.algebnaly.neonfiles.filesystem.utils.isImage
 import com.algebnaly.neonfiles.filesystem.utils.toContentUri
-import com.algebnaly.neonfiles.filesystem.utils.toContentUriString
 import com.algebnaly.neonfiles.ui.MainViewModel
-import com.algebnaly.neonfiles.platform.content.NeonFilesAuthority
 import com.algebnaly.neonfiles.ui.OperationMode
 import com.algebnaly.neonfiles.ui.PathViewState
 import com.algebnaly.neonfiles.ui.components.FileListView
@@ -50,12 +42,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.nio.file.Path
-import kotlin.io.path.isDirectory
 import androidx.core.net.toUri
 import coil3.ImageLoader
 import coil3.video.VideoFrameDecoder
-import com.algebnaly.neonfiles.filesystem.utils.isText
-import com.algebnaly.neonfiles.filesystem.utils.isVideo
 import com.algebnaly.neonfiles.ui.utils.NioPathFetcher
 import com.algebnaly.neonfiles.utils.startApkInstallationIntent
 

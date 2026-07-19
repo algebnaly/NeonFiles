@@ -1,8 +1,7 @@
 package com.algebnaly.neonfiles.ui.screen
 
-import com.algebnaly.neonfiles.data.LocationItem
-import com.algebnaly.neonfiles.filesystem.FsConfig
-import com.algebnaly.neonfiles.filesystem.FsType
+import com.algebnaly.neonfiles.core.model.StorageLocation
+import com.algebnaly.neonfiles.filesystem.StorageConfig
 
 data class NFS4AddLocationUiState(
     val name: String = "New NFS4 Location",
@@ -10,13 +9,12 @@ data class NFS4AddLocationUiState(
     val serverPort: Short = 2049,
     val path: String = "/",
     val warningMessage: String = ""
-){
-    fun toLocationItem(): LocationItem{
-        return LocationItem(
+) {
+    fun toStorageLocation(): StorageLocation {
+        return StorageLocation(
             name = name,
             path = path,
-            fsType = FsType.NFS,
-            fsConfig = FsConfig.NFS(
+            config = StorageConfig.NFS(
                 serverAddress = serverAddress,
             )
         )

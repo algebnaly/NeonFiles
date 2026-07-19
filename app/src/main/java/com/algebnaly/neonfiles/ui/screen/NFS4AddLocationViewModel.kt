@@ -26,6 +26,6 @@ class NFS4AddLocationViewModel(
     }
 
     suspend fun saveLocation(){
-        locationRepository.insertLocation(uiState.value.toLocationItem())
+        locationRepository.save(uiState.value.toStorageLocation())
     }
 }

@@ -1,15 +1,33 @@
 package com.algebnaly.neonfiles.data
 
+import com.algebnaly.neonfiles.core.model.StorageLocation
+import com.algebnaly.neonfiles.data.location.mapper.toDomain
+import com.algebnaly.neonfiles.data.location.mapper.toEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
-class LocationRepository(private val locationItemDao: LocationItemDao) {
-    fun getAllLocationStream(): Flow<List<LocationItem>> = locationItemDao.getAllItems()
+interface LocationRepository{
+    fun observeAll(): Flow<List<StorageLocation>>
+    fun observe(id: Int): Flow<StorageLocation?>
+    suspend fun save(location: StorageLocation)
+    suspend fun delete(location: StorageLocation)
+}
 
-    fun getLocationStream(id: Int): Flow<LocationItem?> = locationItemDao.getItem(id)
+class OfflineLocationRepository(
+    private val dao: LocationEntityDao,
+) : LocationRepository {
 
-    suspend fun insertLocation(locationItem: LocationItem) = locationItemDao.insert(locationItem)
+    override fun observeAll(): Flow<List<StorageLocation>> =
+        dao.observeAll().map { entities -> entities.map(LocationEntity::toDomain) }
 
-    suspend fun deleteLocation(locationItem: LocationItem) = locationItemDao.delete(locationItem)
+    override fun observe(id: Int): Flow<StorageLocation?> =
+        dao.observe(id).map { it?.toDomain() }
 
-    suspend fun updateLocation(locationItem: LocationItem) = locationItemDao.update(locationItem)
+    override suspend fun save(location: StorageLocation) {
+        dao.upsert(location.toEntity())
+    }
+
+    override suspend fun delete(location: StorageLocation) {
+        dao.delete(location.toEntity())
+    }
 }
