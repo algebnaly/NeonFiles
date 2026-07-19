@@ -35,6 +35,7 @@ import com.algebnaly.neonfiles.ui.screen.NFS4AddLocationScreen
 import com.algebnaly.neonfiles.ui.screen.NFS4EditLocationScreen
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.algebnaly.neonfiles.platform.intent.openWithExternalApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -107,9 +108,25 @@ fun NeonFilesApp(mainViewModel: MainViewModel = viewModel(factory = AppViewModel
     val deleteOperationName = stringResource(R.string.delete_operation_name)
     val successName = stringResource(R.string.success)
 
-    LaunchedEffect(Unit) {
-        mainViewModel.toastFlow.collect { message ->
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    LaunchedEffect(mainViewModel) {
+        mainViewModel.effects.collect { effect ->
+            when (effect) {
+                is FileBrowserEffect.ShowMessage -> {
+                    Toast.makeText(
+                        context,
+                        effect.message,
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+
+                is FileBrowserEffect.OpenExternal -> {
+                    openWithExternalApplication(
+                        context = context,
+                        path = effect.path,
+                        mimeType = effect.mimeType,
+                    )
+                }
+            }
         }
     }
 

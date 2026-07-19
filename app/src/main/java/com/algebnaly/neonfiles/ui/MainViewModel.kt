@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -53,8 +54,8 @@ class MainViewModel(
     val refreshTrigger = _refreshTrigger.asStateFlow()
 
 
-    private val _toastFlow = MutableSharedFlow<String>()
-    val toastFlow: SharedFlow<String> = _toastFlow
+    private val _effects = MutableSharedFlow<FileBrowserEffect>()
+    val effects: SharedFlow<FileBrowserEffect> = _effects.asSharedFlow()
 
     init {
         viewModelScope.launch {
@@ -137,13 +138,12 @@ class MainViewModel(
                 _uiState.update { state ->
                     state.copy(currentPath = path)
                 }
-                // loadFileListSuspend 会被 combine flow 触发，完成后会设置 _isLoading = false
             } catch (e: Exception) {
                 ensureActive()
                 _uiState.update { state ->
                     state.copy(isLoading = true)
                 }
-                sendToast(e.toString())
+                _effects.emit(FileBrowserEffect.ShowMessage(e.message ?: e.toString()))
             }
         }
     }
@@ -205,9 +205,20 @@ class MainViewModel(
         }
     }
 
-    fun sendToast(message: String) {
+    fun requestOpenExternal(path: Path, mimeType: String) {
         viewModelScope.launch {
-            _toastFlow.emit(message)
+            _effects.emit(
+                FileBrowserEffect.OpenExternal(
+                    path = path,
+                    mimeType = mimeType.ifBlank { "*/*" },
+                )
+            )
+        }
+    }
+
+    fun showMessage(message: String) {
+        viewModelScope.launch {
+            _effects.emit(FileBrowserEffect.ShowMessage(message))
         }
     }
 }
