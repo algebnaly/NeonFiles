@@ -21,6 +21,10 @@ import kotlinx.coroutines.launch
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.stream.Collectors
+import kotlin.collections.emptySet
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import java.text.Collator
 
 enum class OperationMode {
     Browser,
@@ -29,41 +33,43 @@ enum class OperationMode {
     Cut
 }
 
-class MainViewModel(val initialPath: Path, val storageConnector: StorageConnector, val fileOperationManager: BackgroundFileOperationManager) : ViewModel() {
-    val currentPath: MutableStateFlow<Path> = MutableStateFlow(initialPath)
+class MainViewModel(
+    val initialPath: Path,
+    val storageConnector: StorageConnector,
+    val fileOperationManager: BackgroundFileOperationManager
+) : ViewModel() {
 
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    private val _uiState = MutableStateFlow(
+        FileBrowserUiState(currentPath = initialPath)
+    )
+
+    val uiState: StateFlow<FileBrowserUiState> = _uiState.asStateFlow()
 
     private var locationLoadJob: Job? = null
     private var savedPath: Path? = null
     private var savedFileItems: List<PathViewState> = emptyList()
 
-    private val _fileItems = MutableStateFlow<List<PathViewState>>(emptyList())
-    val fileItems: StateFlow<List<PathViewState>> = _fileItems.asStateFlow()
-
     private val _refreshTrigger = MutableStateFlow(0);
     val refreshTrigger = _refreshTrigger.asStateFlow()
 
-    val selectedPathSet: MutableStateFlow<Set<Path>> = MutableStateFlow(emptySet())
-    val operationMode: MutableStateFlow<OperationMode> = MutableStateFlow(OperationMode.Browser)
 
     private val _toastFlow = MutableSharedFlow<String>()
     val toastFlow: SharedFlow<String> = _toastFlow
 
-    var showHidden: Boolean = false
-
     init {
         viewModelScope.launch {
-            fileOperationManager.eventFlow.collect(){
-                    event ->
+            fileOperationManager.eventFlow.collect() { event ->
                 refresh()
             }
         }
         viewModelScope.launch {
-            combine(currentPath, refreshTrigger) { _, _ ->
-            }.collectLatest {
-                loadFileListSuspend()
+            combine(
+                uiState.map { it.currentPath }.distinctUntilChanged(),
+                refreshTrigger
+            ) { path, _ ->
+                path
+            }.collectLatest { path ->
+                loadFileListSuspend(path)
             }
         }
     }
@@ -72,20 +78,71 @@ class MainViewModel(val initialPath: Path, val storageConnector: StorageConnecto
         _refreshTrigger.update { it + 1 }
     }
 
-    fun openLocation(location: StorageLocation){
+    fun open(path: Path) {
+        _uiState.update { state ->
+            state.copy(currentPath = path)
+        }
+    }
+
+    fun toggleSelection(path: Path) {
+        _uiState.update { state ->
+            val nextSelection = if (path in state.selectedPaths) {
+                state.selectedPaths.minusElement(path)
+            } else {
+                state.selectedPaths.plusElement(path)
+            }
+            state.copy(selectedPaths = nextSelection)
+        }
+    }
+
+    fun enterSelection(path: Path) {
+        _uiState.update { state ->
+            state.copy(selectedPaths = setOf(path), mode = OperationMode.Select)
+        }
+    }
+
+    fun enterCopy() {
+        if (uiState.value.selectedPaths.isEmpty()) return
+
+        _uiState.update { state ->
+            state.copy(mode = OperationMode.Copy)
+        }
+    }
+
+    fun enterCut() {
+        if (uiState.value.selectedPaths.isEmpty()) return
+        _uiState.update { state ->
+            state.copy(mode = OperationMode.Cut)
+        }
+    }
+
+    fun returnToBrowser() {
+        _uiState.update { state ->
+            state.copy(selectedPaths = emptySet(), mode = OperationMode.Browser)
+        }
+    }
+
+    fun openLocation(location: StorageLocation) {
         locationLoadJob?.cancel()
 
-        savedPath = currentPath.value
-        savedFileItems = _fileItems.value
+        savedPath = uiState.value.currentPath
+        savedFileItems = uiState.value.files
 
         locationLoadJob = viewModelScope.launch {
-            _isLoading.value = true
+            _uiState.update { state ->
+                state.copy(isLoading = true)
+            }
             try {
                 val path = storageConnector.connect(location)
+                _uiState.update { state ->
+                    state.copy(currentPath = path)
+                }
                 // loadFileListSuspend 会被 combine flow 触发，完成后会设置 _isLoading = false
             } catch (e: Exception) {
                 ensureActive()
-                _isLoading.value = false
+                _uiState.update { state ->
+                    state.copy(isLoading = true)
+                }
                 sendToast(e.toString())
             }
         }
@@ -94,17 +151,22 @@ class MainViewModel(val initialPath: Path, val storageConnector: StorageConnecto
     fun cancelLoading() {
         locationLoadJob?.cancel()
         locationLoadJob = null
-        _isLoading.value = false
+        _uiState.update { state ->
+            state.copy(isLoading = false)
+        }
         savedPath?.let { path ->
-            currentPath.value = path
-            _fileItems.value = savedFileItems
+            open(path)
+            _uiState.update { state ->
+                state.copy(files = savedFileItems)
+            }
         }
     }
 
-    private suspend fun loadFileListSuspend() {
+    private suspend fun loadFileListSuspend(path: Path) {
         withContext(Dispatchers.IO) {
-            val path = currentPath.value
+            val path = uiState.value.currentPath
             try {
+                val nameCollator = Collator.getInstance()
                 val pathList = Files.list(path).use { it.collect(Collectors.toList()) }
                 val pathViewStateList = pathList.map { p ->
                     PathViewState(
@@ -112,20 +174,34 @@ class MainViewModel(val initialPath: Path, val storageConnector: StorageConnecto
                         name = p.fileName.toString(),
                         mimeType = Files.probeContentType(p) ?: ""
                     )
-                }.sortedBy { it.name }
-                _fileItems.value = pathViewStateList
-                _isLoading.value = false
+                }.sortedWith(
+                    compareBy<PathViewState> {
+                        if (it.isDirectory) 0 else 1
+                    }.thenComparator { left, right ->
+                        nameCollator.compare(left.name, right.name)
+                    }
+                )
+                _uiState.update { state ->
+                    state.copy(
+                        files = pathViewStateList,
+                        isLoading = false
+                    )
+                }
             } catch (e: Exception) {
                 ensureActive()
-                _fileItems.value = emptyList()
-                _isLoading.value = false
+                _uiState.update { state ->
+                    state.copy(
+                        files = emptyList(),
+                        isLoading = false
+                    )
+                }
             }
         }
     }
 
     fun loadFileList() {
         viewModelScope.launch {
-            loadFileListSuspend()
+            loadFileListSuspend(uiState.value.currentPath)
         }
     }
 

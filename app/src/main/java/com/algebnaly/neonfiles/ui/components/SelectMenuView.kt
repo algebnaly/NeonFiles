@@ -15,15 +15,15 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.algebnaly.neonfiles.R
 import com.algebnaly.neonfiles.ui.MainViewModel
-import com.algebnaly.neonfiles.ui.OperationMode
 
 @Composable
 fun SelectMenuView(viewModel: MainViewModel) {
@@ -35,6 +35,8 @@ fun SelectMenuView(viewModel: MainViewModel) {
 
     val context = LocalContext.current
 
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     Row(modifier = Modifier.fillMaxSize()) {
         BottomMenuItem(
             Icons.Outlined.FileCopy,
@@ -43,7 +45,7 @@ fun SelectMenuView(viewModel: MainViewModel) {
                 .weight(1f)
                 .fillMaxSize()
                 .clickable {
-                    viewModel.operationMode.value = OperationMode.Copy
+                    viewModel.enterCopy()
                 }
         )
         BottomMenuItem(
@@ -63,10 +65,8 @@ fun SelectMenuView(viewModel: MainViewModel) {
                 .weight(1f)
                 .fillMaxSize()
                 .clickable {
-                    viewModel.fileOperationManager.doDelete(viewModel.selectedPathSet.value)
-                    viewModel.selectedPathSet.value = emptySet()
-                    viewModel.operationMode.value = OperationMode.Browser
-
+                    viewModel.fileOperationManager.doDelete(uiState.selectedPaths)
+                    viewModel.returnToBrowser()
                 }
         )
         BottomMenuItem(
@@ -102,7 +102,7 @@ fun BottomMenuItem(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
-        ) {
+    ) {
         Icon(
             imageVector,
             contentDescription = label,

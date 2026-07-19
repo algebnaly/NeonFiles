@@ -1,7 +1,5 @@
 package com.algebnaly.neonfiles.ui.components
 
-import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,7 +12,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.algebnaly.neonfiles.R
 import com.algebnaly.neonfiles.ui.MainViewModel
-import com.algebnaly.neonfiles.ui.OperationMode
 
 @Composable
 fun CopyMenuView(viewModel: MainViewModel, progressViewModel: ProgressViewModel) {
@@ -30,12 +27,11 @@ fun CopyMenuView(viewModel: MainViewModel, progressViewModel: ProgressViewModel)
                 .fillMaxSize()
                 .clickable {
                     viewModel.fileOperationManager.doCopy(
-                        viewModel.selectedPathSet.value,
-                        viewModel.currentPath.value
+                        viewModel.uiState.value.selectedPaths,
+                        viewModel.uiState.value.currentPath
                     )
                     progressViewModel.show()
-                    viewModel.selectedPathSet.value = emptySet()
-                    viewModel.operationMode.value = OperationMode.Browser
+                    viewModel.returnToBrowser()
                 }
         )
         BottomMenuItem(
@@ -45,8 +41,7 @@ fun CopyMenuView(viewModel: MainViewModel, progressViewModel: ProgressViewModel)
                 .weight(1f)
                 .fillMaxSize()
                 .clickable {
-                    viewModel.selectedPathSet.value = emptySet()
-                    viewModel.operationMode.value = OperationMode.Browser
+                    viewModel.returnToBrowser()
                 }
         )
 

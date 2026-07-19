@@ -1,6 +1,6 @@
 package com.algebnaly.neonfiles.ui.components
 
-import android.widget.Toast
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -21,27 +21,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
-import coil3.video.VideoFrameDecoder
 import com.algebnaly.neonfiles.ui.MainViewModel
 import com.algebnaly.neonfiles.ui.OperationMode
-import com.algebnaly.neonfiles.ui.PathViewState
 import com.algebnaly.neonfiles.ui.screen.ListItemCard
 import com.algebnaly.neonfiles.ui.screen.SelectModeFileItemCard
-import com.algebnaly.neonfiles.ui.utils.NioPathFetcher
-import kotlinx.coroutines.flow.filter
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.stream.Collectors
-import kotlin.use
 
 @Composable
 fun FileListView(
@@ -49,11 +37,12 @@ fun FileListView(
     progressViewModel: ProgressViewModel,
     imageLoader: ImageLoader
 ) {
+    val uiState by viewState.uiState.collectAsStateWithLifecycle()
 
-    val operationMode by viewState.operationMode.collectAsState()
-    val isLoading by viewState.isLoading.collectAsState()
+    val operationMode = uiState.mode
+    val isLoading = uiState.isLoading
+    val itemsList = uiState.files
 
-    val itemsList: List<PathViewState> by viewState.fileItems.collectAsState()
     val filteredList = itemsList.filter { !it.name.startsWith(".") }
 
     val bottomMenuHeight = 56.dp

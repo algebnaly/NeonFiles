@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.nio.file.Path
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.ImageLoader
 import coil3.video.VideoFrameDecoder
 import com.algebnaly.neonfiles.ui.utils.NioPathFetcher
@@ -61,8 +62,9 @@ fun FileListScreen(viewState: MainViewModel, progressViewModel: ProgressViewMode
     }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val currentPath by viewState.currentPath.collectAsState()
-    val operationMode by viewState.operationMode.collectAsState()
+    val uiState by viewState.uiState.collectAsStateWithLifecycle()
+    val currentPath = uiState.currentPath
+    val operationMode = uiState.mode
     BackHandler(enabled = true) {
         handleBackPress(
             drawerState = drawerState,
@@ -85,22 +87,15 @@ fun SelectModeFileItemCard(
     viewState: MainViewModel,
     imageLoader: ImageLoader
 ) {
-    val selectedPathSet by viewState.selectedPathSet.collectAsState()
+    val uiState by viewState.uiState.collectAsStateWithLifecycle()
+    val selectedPathSet = uiState.selectedPaths
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
                 onClick = {
-                    if (selectedPathSet.contains(file.path)) {
-                        viewState.selectedPathSet.update { f ->
-                            f.minusElement(file.path)
-                        }
-                    } else {
-                        viewState.selectedPathSet.update { f ->
-                            f.plusElement(file.path)
-                        }
-                    }
+                    viewState.toggleSelection(file.path)
                 }
             )
     )
@@ -135,7 +130,7 @@ fun ListItemCard(item: PathViewState, viewState: MainViewModel, imageLoader: Ima
             .combinedClickable(
                 onClick = {
                     if (item.isDirectory) {
-                        viewState.currentPath.value = item.path
+                        viewState.open(item.path)
                     } else {
                         var mimeType = item.mimeType
                         if (isApkFile(mimeType)) {
@@ -166,10 +161,7 @@ fun ListItemCard(item: PathViewState, viewState: MainViewModel, imageLoader: Ima
                         }
                     }
                 }, onLongClick = {
-                    viewState.selectedPathSet.update { s ->
-                        s.plusElement(item.path)
-                    }
-                    viewState.operationMode.value = OperationMode.Select
+                    viewState.enterSelection(item.path)
                 })
     ) {
         FileView(item, imageLoader)
@@ -192,13 +184,12 @@ fun handleBackPress(
         }
 
         operationMode == OperationMode.Select -> {
-            viewState.selectedPathSet.value = emptySet()
-            viewState.operationMode.value = OperationMode.Browser
+            viewState.cancelLoading()
         }
 
         currentPath.parent != null && currentPath != getExternalRootPath() -> {
-            viewState.currentPath.value = currentPath.parent!!
-        }
+            viewState.open(currentPath.parent!!)
+        }// TODO, implement volume selection UI
 
         else -> {
             (context as? Activity)?.finish()
