@@ -1,4 +1,4 @@
-package com.algebnaly.neonfiles.ui.screen
+package com.algebnaly.neonfiles.feature.location
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -25,15 +24,14 @@ import com.algebnaly.neonfiles.ui.AppViewModelProvider
 import kotlinx.coroutines.launch
 
 @Composable
-fun NFS4EditLocationScreen(
+fun Nfs4LocationScreen(
     onBack: () -> Unit = {},
-    nfs4EditLocationViewModel: NFS4EditLocationViewModel = viewModel(
+    nfS4LocationViewModel: Nfs4LocationViewModel = viewModel(
         factory = AppViewModelProvider.Factory
     )
 ) {
-    val uiState by nfs4EditLocationViewModel.uiState.collectAsState()
+    val uiState by nfS4LocationViewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
-    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -44,7 +42,7 @@ fun NFS4EditLocationScreen(
             TextField(
                 value = uiState.name,
                 onValueChange = {
-                    nfs4EditLocationViewModel.updateName(it)
+                    nfS4LocationViewModel.updateName(it)
                 },
                 singleLine = true,
                 modifier = Modifier.weight(2f)
@@ -56,7 +54,7 @@ fun NFS4EditLocationScreen(
             TextField(
                 value = uiState.serverAddress,
                 onValueChange = {
-                    nfs4EditLocationViewModel.updateServerAddress(it)
+                    nfS4LocationViewModel.updateServerAddress(it)
                 },
                 singleLine = true,
                 modifier = Modifier.weight(2f)
@@ -67,7 +65,7 @@ fun NFS4EditLocationScreen(
             TextField(
                 value = uiState.path,
                 onValueChange = {
-                    nfs4EditLocationViewModel.updatePath(it)
+                    nfS4LocationViewModel.updatePath(it)
                 },
                 singleLine = true,
                 modifier = Modifier.weight(2f)
@@ -83,32 +81,13 @@ fun NFS4EditLocationScreen(
             }
             Button(onClick = {
                 coroutineScope.launch {
-                    nfs4EditLocationViewModel.saveLocation()
+                    nfS4LocationViewModel.saveLocation()
                     onBack()
                 }
             }, modifier = Modifier.weight(1f)) {
                 Text(
                     stringResource(id = R.string.save_button_name),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Button(
-                onClick = {
-                    coroutineScope.launch {
-                        nfs4EditLocationViewModel.deleteLocation()
-                        onBack()
-                    }
-                }, 
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text(
-                    stringResource(id = R.string.delete_operation_name),
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onError,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

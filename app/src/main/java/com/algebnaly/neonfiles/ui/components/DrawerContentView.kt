@@ -1,6 +1,5 @@
 package com.algebnaly.neonfiles.ui.components
 
-import android.widget.Toast
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -28,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.algebnaly.neonfiles.ui.AppViewModelProvider
-import com.algebnaly.neonfiles.ui.MainViewModel
+import com.algebnaly.neonfiles.feature.browser.FileBrowserViewModel
 import com.algebnaly.neonfiles.ui.components.location.NewLocationButton
 
 @Composable
@@ -39,7 +38,7 @@ fun DrawerContentView(
     drawerContentViewModel: DrawerContentViewModel = viewModel(
         factory = AppViewModelProvider.Factory
     ),
-    mainViewModel: MainViewModel = viewModel(
+    fileBrowserViewModel: FileBrowserViewModel = viewModel(
         factory = AppViewModelProvider.Factory
     )
 ) {
@@ -54,7 +53,7 @@ fun DrawerContentView(
                     Row {
                         Box (modifier = Modifier.weight(1f).combinedClickable(
                             onClick = {
-                                mainViewModel.openLocation(location)
+                                fileBrowserViewModel.openLocation(location)
                                 onCloseDrawer()
                             },
                             onLongClick = {

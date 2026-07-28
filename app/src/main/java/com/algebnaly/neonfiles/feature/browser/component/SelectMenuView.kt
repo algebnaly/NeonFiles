@@ -1,4 +1,4 @@
-package com.algebnaly.neonfiles.ui.components
+package com.algebnaly.neonfiles.feature.browser.component
 
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -15,18 +15,16 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.algebnaly.neonfiles.R
-import com.algebnaly.neonfiles.ui.MainViewModel
+import com.algebnaly.neonfiles.ui.FileBrowserAction
 
 @Composable
-fun SelectMenuView(viewModel: MainViewModel) {
+fun SelectMenuView(onAction: (FileBrowserAction) -> Unit) {
     val copy_operation_name = stringResource(R.string.copy_operation_name)
     val cut_operation_name = stringResource(R.string.cut_operation_name)
     val delete_operation_name = stringResource(R.string.delete_operation_name)
@@ -34,8 +32,6 @@ fun SelectMenuView(viewModel: MainViewModel) {
     val more_operation_name = stringResource(R.string.more_operation_name)
 
     val context = LocalContext.current
-
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Row(modifier = Modifier.fillMaxSize()) {
         BottomMenuItem(
@@ -45,7 +41,7 @@ fun SelectMenuView(viewModel: MainViewModel) {
                 .weight(1f)
                 .fillMaxSize()
                 .clickable {
-                    viewModel.enterCopy()
+                    onAction(FileBrowserAction.Copy)
                 }
         )
         BottomMenuItem(
@@ -65,8 +61,7 @@ fun SelectMenuView(viewModel: MainViewModel) {
                 .weight(1f)
                 .fillMaxSize()
                 .clickable {
-                    viewModel.fileOperationManager.doDelete(uiState.selectedPaths)
-                    viewModel.returnToBrowser()
+                    onAction(FileBrowserAction.DeleteSelected)
                 }
         )
         BottomMenuItem(

@@ -1,5 +1,6 @@
 package com.algebnaly.neonfiles.ui
 
+import com.algebnaly.neonfiles.feature.browser.OperationMode
 import java.nio.file.Path
 
 data class FileBrowserUiState(

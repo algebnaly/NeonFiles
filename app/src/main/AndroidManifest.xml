@@ -29,11 +29,11 @@
             </intent-filter>
         </activity>
         <provider
-            android:authorities="com.algebnaly.nfs4c.provider"
-            android:name=".ui.NioContentProvider"
+            android:authorities="${applicationId}.provider"
+            android:name=".platform.content.NioContentProvider"
             android:exported="true"
             android:grantUriPermissions="true"
-            >
+            tools:ignore="ExportedContentProvider">
 
         </provider>
     </application>

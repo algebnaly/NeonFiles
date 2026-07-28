@@ -12,26 +12,27 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.UUID
 import kotlin.math.max
+import kotlin.time.Duration.Companion.milliseconds
 
-class ProgressViewModel(val backgroudFileOperationManager: BackgroundFileOperationManager): ViewModel() {
+class ProgressViewModel(val backgroundFileOperationManager: BackgroundFileOperationManager): ViewModel() {
     private var currentTaskId: UUID? = null
     private val _uiState = MutableStateFlow(ProgressUiState())
 
     val uiState: StateFlow<ProgressUiState> = _uiState
 
     init {
-        backgroudFileOperationManager.taskManager.onAddTask = { id ->
+        backgroundFileOperationManager.taskManager.onAddTask = { id ->
             onAddTask(id)
         }
 
-        backgroudFileOperationManager.taskManager.onRemove = { id ->
+        backgroundFileOperationManager.taskManager.onRemove = { id ->
             onRemove(id)
         }
 
         viewModelScope.launch {
             while (isActive){
                 updateProgress()
-                delay(1000L)
+                delay(1000L.milliseconds)
             }
         }
     }
@@ -47,12 +48,12 @@ class ProgressViewModel(val backgroudFileOperationManager: BackgroundFileOperati
     fun cancel(){
         currentTaskId?.let {
             id ->
-            backgroudFileOperationManager.taskManager.cancelTask(id)
+            backgroundFileOperationManager.taskManager.cancelTask(id)
         }
     }
 
     fun updateProgress(){
-        val taskInfo = currentTaskId?.let { backgroudFileOperationManager.taskManager.getTaskInfo(it) }
+        val taskInfo = currentTaskId?.let { backgroundFileOperationManager.taskManager.getTaskInfo(it) }
         taskInfo?.let {
             t ->
             _uiState.value = _uiState.value.copy(
@@ -73,6 +74,7 @@ class ProgressViewModel(val backgroudFileOperationManager: BackgroundFileOperati
     fun onAddTask(id: UUID){
         currentTaskId = id
         updateProgress()
+        show()
     }
 
     fun onRemove(id: UUID){

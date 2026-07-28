@@ -1,10 +1,15 @@
-package com.algebnaly.neonfiles.ui
+package com.algebnaly.neonfiles.feature.browser
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.algebnaly.neonfiles.core.filesystem.StorageConnector
 import com.algebnaly.neonfiles.core.model.StorageLocation
+import com.algebnaly.neonfiles.filesystem.utils.getMimeTypeWithDefault
 import com.algebnaly.neonfiles.tasks.BackgroundFileOperationManager
+import com.algebnaly.neonfiles.ui.FileBrowserAction
+import com.algebnaly.neonfiles.ui.FileBrowserEffect
+import com.algebnaly.neonfiles.ui.FileBrowserUiState
+import com.algebnaly.neonfiles.ui.PathViewState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -26,6 +31,7 @@ import kotlin.collections.emptySet
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import java.text.Collator
+import kotlin.io.path.isDirectory
 
 enum class OperationMode {
     Browser,
@@ -34,7 +40,7 @@ enum class OperationMode {
     Cut
 }
 
-class MainViewModel(
+class FileBrowserViewModel(
     val initialPath: Path,
     val storageConnector: StorageConnector,
     val fileOperationManager: BackgroundFileOperationManager
@@ -117,7 +123,7 @@ class MainViewModel(
         }
     }
 
-    fun returnToBrowser() {
+    fun returnToBrowsing() {
         _uiState.update { state ->
             state.copy(selectedPaths = emptySet(), mode = OperationMode.Browser)
         }
@@ -127,7 +133,7 @@ class MainViewModel(
         locationLoadJob?.cancel()
 
         savedPath = uiState.value.currentPath
-        savedFileItems = uiState.value.files
+        savedFileItems = uiState.value.files.filter { !it.name.startsWith(".") }
 
         locationLoadJob = viewModelScope.launch {
             _uiState.update { state ->
@@ -141,7 +147,7 @@ class MainViewModel(
             } catch (e: Exception) {
                 ensureActive()
                 _uiState.update { state ->
-                    state.copy(isLoading = true)
+                    state.copy(isLoading = false)
                 }
                 _effects.emit(FileBrowserEffect.ShowMessage(e.message ?: e.toString()))
             }
@@ -164,7 +170,6 @@ class MainViewModel(
 
     private suspend fun loadFileListSuspend(path: Path) {
         withContext(Dispatchers.IO) {
-            val path = uiState.value.currentPath
             try {
                 val nameCollator = Collator.getInstance()
                 val pathList = Files.list(path).use { it.collect(Collectors.toList()) }
@@ -196,6 +201,51 @@ class MainViewModel(
                     )
                 }
             }
+        }
+    }
+
+    fun onAction(action: FileBrowserAction) {
+        when (action) {
+            is FileBrowserAction.Open -> {
+                if (action.path.isDirectory()) {
+                    open(action.path)
+                } else {
+                    requestOpenExternal(
+                        path = action.path,
+                        mimeType = getMimeTypeWithDefault(action.path.fileName.toString()),
+                    )
+                }
+            }
+
+            is FileBrowserAction.Select -> enterSelection(action.path)
+            is FileBrowserAction.ToggleSelection -> toggleSelection(action.path)
+            FileBrowserAction.Copy -> enterCopy()
+
+            FileBrowserAction.Paste -> {
+                val state = uiState.value
+                if (state.selectedPaths.isNotEmpty()) {
+                    fileOperationManager.doCopy(
+                        fileSet = state.selectedPaths,
+                        targetDir = state.currentPath,
+                    )
+                }
+                returnToBrowsing()
+            }
+
+            FileBrowserAction.DeleteSelected -> {
+                val state = uiState.value
+                if (state.selectedPaths.isNotEmpty()) {
+                    fileOperationManager.doDelete(state.selectedPaths)
+                }
+                returnToBrowsing()
+            }
+
+            FileBrowserAction.CancelSelection,
+            FileBrowserAction.CancelPendingCopy -> returnToBrowsing()
+
+            FileBrowserAction.CancelLoading -> cancelLoading()
+            FileBrowserAction.Refresh -> refresh()
+            FileBrowserAction.Back -> uiState.value.currentPath.parent?.let(::open)
         }
     }
 

@@ -22,15 +22,47 @@ import androidx.compose.ui.unit.dp
 import com.algebnaly.neonfiles.R
 
 @Composable
-fun ProgressBlock(onHide: () -> Unit, onCancel: () -> Unit, titleMessage: String, progressMessage: String, progression: Float){
+fun ProgressBlock(
+    onHide: () -> Unit,
+    onCancel: () -> Unit,
+    titleMessage: String,
+    progressMessage: String,
+    progression: Float
+) {
     val cancel_button_name = stringResource(R.string.cancel_button_name)
-    val hide_button_name = stringResource(id=R.string.hide_button_name)
-    Box (modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable(enabled = false){}) {
-        Box(modifier = Modifier.fillMaxWidth(fraction = 0.8f).background(color = Color.White).align(alignment = Alignment.Center)){
-            Column(modifier = Modifier.align(alignment = Alignment.Center).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(titleMessage, modifier = Modifier.align(alignment = Alignment.CenterHorizontally))
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth(0.9f).align(alignment = Alignment.CenterHorizontally),progress = { progression }, gapSize = 0.dp)
-                Text(progressMessage, modifier = Modifier.align(alignment = Alignment.CenterHorizontally))
+    val hide_button_name = stringResource(id = R.string.hide_button_name)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.4f))
+            .clickable(enabled = false) {}) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction = 0.8f)
+                .background(color = Color.White)
+                .align(alignment = Alignment.Center)
+        ) {
+            Column(
+                modifier = Modifier
+                    .align(alignment = Alignment.Center)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    titleMessage,
+                    modifier = Modifier.align(alignment = Alignment.CenterHorizontally)
+                )
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .align(alignment = Alignment.CenterHorizontally),
+                    progress = { progression },
+                    gapSize = 0.dp
+                )
+                Text(
+                    progressMessage,
+                    modifier = Modifier.align(alignment = Alignment.CenterHorizontally)
+                )
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Spacer(Modifier.weight(0.2f))
                     Button(

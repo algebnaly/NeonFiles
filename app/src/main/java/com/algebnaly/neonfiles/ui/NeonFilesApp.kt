@@ -16,63 +16,45 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.algebnaly.neonfiles.NeonFilesApplication
 import com.algebnaly.neonfiles.R
 import com.algebnaly.neonfiles.tasks.BackgroundFileOperationManagerInfo
 import com.algebnaly.neonfiles.tasks.OperationType
 import com.algebnaly.neonfiles.ui.components.DrawerContentView
-import com.algebnaly.neonfiles.ui.components.ProgressViewModel
-import com.algebnaly.neonfiles.ui.screen.FileListScreen
-import com.algebnaly.neonfiles.ui.screen.NFS4AddLocationScreen
-import com.algebnaly.neonfiles.ui.screen.NFS4EditLocationScreen
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
-import com.algebnaly.neonfiles.platform.intent.openWithExternalApplication
+import com.algebnaly.neonfiles.feature.browser.FileBrowserRoute
+import com.algebnaly.neonfiles.feature.location.NFS4LocationRoute
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-
-enum class NeonFilesScreen() {
-    FileListScreen,
-    NFS4AddLocationScreen,
-    NFS4EditLocationScreen
-}
 
 @Composable
 fun NeonFilesNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController,
-    mainViewModel: MainViewModel,
-    progressViewModel: ProgressViewModel
 ) {
 
     NavHost(
         navController = navController,
-        startDestination = NeonFilesScreen.FileListScreen.name,
+        startDestination = Screen.FileBrowser,
         modifier = modifier
     ) {
-        composable(route = NeonFilesScreen.FileListScreen.name) {
-            FileListScreen(mainViewModel,progressViewModel)
+        composable<Screen.FileBrowser> {
+            FileBrowserRoute()
         }
-        composable(route = NeonFilesScreen.NFS4AddLocationScreen.name) {
-            NFS4AddLocationScreen(onBack = {
-                navController.popBackStack()
-            })
-        }
-        composable(
-            route = "${NeonFilesScreen.NFS4EditLocationScreen.name}/{locationId}",
-            arguments = listOf(navArgument("locationId") { type = NavType.IntType })
-        ) {
-            NFS4EditLocationScreen(onBack = {
-                navController.popBackStack()
-            })
+        composable<Screen.NfsLocation> {
+            NFS4LocationRoute(
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
         }
     }
 }
@@ -97,44 +79,27 @@ fun NeonFilesTopAppBar(scope: CoroutineScope, drawerState: DrawerState) {
 
 
 @Composable
-fun NeonFilesApp(mainViewModel: MainViewModel = viewModel(factory = AppViewModelProvider.Factory), progressViewModel: ProgressViewModel) {
+fun NeonFilesApp(
+) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val navController = rememberNavController()
     val context = LocalContext.current
+    val fileOperationManager = remember {
+        (context.applicationContext as NeonFilesApplication).container.
+        fileOperationManager
+    }
 
     val copyOperationName = stringResource(R.string.copy_operation_name)
     val cutOperationName = stringResource(R.string.cut_operation_name)
     val deleteOperationName = stringResource(R.string.delete_operation_name)
     val successName = stringResource(R.string.success)
 
-    LaunchedEffect(mainViewModel) {
-        mainViewModel.effects.collect { effect ->
-            when (effect) {
-                is FileBrowserEffect.ShowMessage -> {
-                    Toast.makeText(
-                        context,
-                        effect.message,
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                }
-
-                is FileBrowserEffect.OpenExternal -> {
-                    openWithExternalApplication(
-                        context = context,
-                        path = effect.path,
-                        mimeType = effect.mimeType,
-                    )
-                }
-            }
-        }
-    }
-
     LaunchedEffect(Unit) {
-        mainViewModel.fileOperationManager.eventFlow.collect { message ->
-            val messageStr = when(message){
+        fileOperationManager.eventFlow.collect { message ->
+            val messageStr = when (message) {
                 is BackgroundFileOperationManagerInfo.Ok -> {
-                    val opName = when(message.type) {
+                    val opName = when (message.type) {
                         OperationType.Copy -> copyOperationName
                         OperationType.Cut -> cutOperationName
                         OperationType.Delete -> deleteOperationName
@@ -153,7 +118,7 @@ fun NeonFilesApp(mainViewModel: MainViewModel = viewModel(factory = AppViewModel
         drawerContent = {
             DrawerContentView(
                 onAddLocation = {
-                    navController.navigate(NeonFilesScreen.NFS4AddLocationScreen.name)
+                    navController.navigate(Screen.NfsLocation())
                 },
                 onCloseDrawer = {
                     scope.launch {
@@ -161,7 +126,7 @@ fun NeonFilesApp(mainViewModel: MainViewModel = viewModel(factory = AppViewModel
                     }
                 },
                 onEditLocation = { locationId ->
-                    navController.navigate("${NeonFilesScreen.NFS4EditLocationScreen.name}/$locationId")
+                    navController.navigate(Screen.NfsLocation(locationId = locationId))
                 }
             )
         }
@@ -170,8 +135,6 @@ fun NeonFilesApp(mainViewModel: MainViewModel = viewModel(factory = AppViewModel
             NeonFilesNavHost(
                 modifier = Modifier.padding(paddingValues),
                 navController = navController,
-                mainViewModel = mainViewModel,
-                progressViewModel = progressViewModel
             )
         }
     }

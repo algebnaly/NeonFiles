@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
 fun NeonFilesMainApp(progressViewModel: ProgressViewModel = viewModel(factory = AppViewModelProvider.Factory)){
     AppTheme {
         Box(modifier = Modifier.fillMaxSize()){
-            NeonFilesApp(progressViewModel = progressViewModel)
+            NeonFilesApp()
             ProgressOverlay(progressViewModel)
         }
     }

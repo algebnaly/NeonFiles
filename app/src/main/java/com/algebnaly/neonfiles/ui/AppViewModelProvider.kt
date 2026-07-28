@@ -8,8 +8,8 @@ import com.algebnaly.neonfiles.NeonFilesApplication
 import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
 import com.algebnaly.neonfiles.ui.components.DrawerContentViewModel
 import androidx.lifecycle.createSavedStateHandle
-import com.algebnaly.neonfiles.ui.screen.NFS4EditLocationViewModel
-import com.algebnaly.neonfiles.ui.screen.NFS4AddLocationViewModel
+import com.algebnaly.neonfiles.feature.browser.FileBrowserViewModel
+import com.algebnaly.neonfiles.feature.location.Nfs4LocationViewModel
 import com.algebnaly.neonfiles.ui.components.ProgressViewModel
 
 object AppViewModelProvider {
@@ -20,16 +20,16 @@ object AppViewModelProvider {
             )
         }
         initializer {
-            NFS4AddLocationViewModel(neonFilesApplication().container.locationRepository)
-        }
-        initializer {
-            NFS4EditLocationViewModel(
-                this.createSavedStateHandle(),
-                neonFilesApplication().container.locationRepository
+            Nfs4LocationViewModel(
+                this.createSavedStateHandle(), neonFilesApplication().container.locationRepository
             )
         }
         initializer {
-            MainViewModel(initialPath = getExternalRootPath() ,neonFilesApplication().container.storageConnector, neonFilesApplication().container.fileOperationManager)
+            FileBrowserViewModel(
+                initialPath = getExternalRootPath(),
+                neonFilesApplication().container.storageConnector,
+                neonFilesApplication().container.fileOperationManager
+            )
         }
         initializer {
             ProgressViewModel(neonFilesApplication().container.fileOperationManager)

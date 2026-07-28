@@ -1,11 +1,16 @@
 package com.algebnaly.neonfiles
 
 import android.app.Application
+import android.content.Context
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.video.VideoFrameDecoder
 import com.algebnaly.neonfiles.core.model.StorageLocation
 import com.algebnaly.neonfiles.data.AppContainer
 import com.algebnaly.neonfiles.data.AppDataContainer
 import com.algebnaly.neonfiles.filesystem.StorageConfig
 import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
+import com.algebnaly.neonfiles.ui.utils.NioPathFetcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -13,7 +18,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class NeonFilesApplication : Application() {
+class NeonFilesApplication : Application(), SingletonImageLoader.Factory {
     companion object {
         lateinit var instance: NeonFilesApplication
             private set
@@ -42,6 +47,15 @@ class NeonFilesApplication : Application() {
                 )
             }
         }
+    }
+
+    override fun newImageLoader(context: Context): ImageLoader {
+        return ImageLoader.Builder(context)
+            .components {
+                add(NioPathFetcher.Factory())
+                add(VideoFrameDecoder.Factory())
+            }
+            .build()
     }
 
     override fun onTerminate() {

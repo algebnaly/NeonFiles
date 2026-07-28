@@ -115,7 +115,8 @@ androidComponents {
                 jniCrateSrc.set(layout.projectDirectory.dir(nfscrsJniLibProjectPath).dir("src"))
                 abiList.set(supportedAbiList)
                 ndkHome.set(ndkPath)
-                rustFlags.set("")
+                // force 16KiB alignment
+                rustFlags.set("-C link-arg=-Wl,-z,max-page-size=16384")
                 outputDirectory.set(layout.buildDirectory.dir("generated/rustJni/${variant.name}"))
             }
             variant.sources.jniLibs?.addGeneratedSourceDirectory(
@@ -129,12 +130,13 @@ androidComponents {
 }
 
 dependencies {
+    val composeBom = platform(libs.androidx.compose.bom)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
-    implementation(platform(libs.androidx.compose.bom))
+    implementation(composeBom)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
@@ -151,6 +153,7 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(composeBom)
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)

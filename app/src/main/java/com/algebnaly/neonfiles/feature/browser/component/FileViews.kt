@@ -1,9 +1,11 @@
-package com.algebnaly.neonfiles.ui.components
+package com.algebnaly.neonfiles.feature.browser.component
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -13,35 +15,36 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.outlined.ContentCut
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.FileCopy
 import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.VideoFile
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import coil3.request.crossfade
-import coil3.util.DebugLogger
-import coil3.video.VideoFrameDecoder
 import coil3.video.videoFrameMillis
-import com.algebnaly.neonfiles.filesystem.utils.getMimeType
+import com.algebnaly.neonfiles.R
 import com.algebnaly.neonfiles.filesystem.utils.isApkFile
 import com.algebnaly.neonfiles.filesystem.utils.isAudio
-import com.algebnaly.neonfiles.filesystem.utils.isDirectorySafe
 import com.algebnaly.neonfiles.filesystem.utils.isImage
 import com.algebnaly.neonfiles.filesystem.utils.isVideo
+import com.algebnaly.neonfiles.ui.FileBrowserAction
 import com.algebnaly.neonfiles.ui.PathViewState
-import com.algebnaly.neonfiles.ui.utils.NioPathFetcher
 
 @Composable
-fun FileView(file: PathViewState, imageLoader: ImageLoader) {
+fun FileView(file: PathViewState) {
     if (file.isDirectory) {
         Icon(
             Icons.Filled.Folder,
@@ -61,7 +64,6 @@ fun FileView(file: PathViewState, imageLoader: ImageLoader) {
             AsyncImage(
                 model = imageRequest,
                 contentDescription = "image file",
-                imageLoader = imageLoader,
                 modifier = iconModifier
             )
             // TODO: preview
@@ -87,7 +89,6 @@ fun FileView(file: PathViewState, imageLoader: ImageLoader) {
                 AsyncImage(
                     model = videoFrameRequest,
                     contentDescription = "video file",
-                    imageLoader = imageLoader,
                     modifier = iconModifier
                 )
             }

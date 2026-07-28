@@ -11,6 +11,10 @@ fun getMimeType(filePath: String): String? {
     }
 }
 
+fun getMimeTypeWithDefault(filePath: String): String {
+    return getMimeType(filePath) ?: "*/*"
+}
+
 fun isImage(mime: String?): Boolean {
     return mime?.startsWith("image/") == true
 }
