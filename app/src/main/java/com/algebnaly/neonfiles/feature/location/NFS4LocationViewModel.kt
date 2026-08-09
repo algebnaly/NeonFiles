@@ -59,7 +59,17 @@ class Nfs4LocationViewModel(
         _uiState.value = _uiState.value.copy(name = newName)
     }
 
-    suspend fun saveLocation(){
-        locationRepository.save(uiState.value.toStorageLocation())
+    fun saveLocation(onSaved: () -> Unit){
+        viewModelScope.launch {
+            locationRepository.save(uiState.value.toStorageLocation())
+            onSaved() // 保存完毕后，通知外层
+        }
+    }
+
+    fun deleteLocation(onDeleted: () -> Unit){
+        viewModelScope.launch {
+            locationRepository.delete(uiState.value.toStorageLocation())
+            onDeleted()
+        }
     }
 }

@@ -31,24 +31,6 @@ class NeonFilesApplication : Application(), SingletonImageLoader.Factory {
         instance = this
     }
 
-    override fun onCreate() {
-        super.onCreate()
-        appScope.launch {
-            val homeExists = container.locationRepository.observeAll().first().any {
-                it.config == StorageConfig.Local && it.path == getExternalRootPath().toString()
-            }
-            if (!homeExists) {
-                container.locationRepository.save(
-                    StorageLocation(
-                        name = "home",
-                        path = getExternalRootPath().toString(),
-                        config = StorageConfig.Local
-                    )
-                )
-            }
-        }
-    }
-
     override fun newImageLoader(context: Context): ImageLoader {
         return ImageLoader.Builder(context)
             .components {

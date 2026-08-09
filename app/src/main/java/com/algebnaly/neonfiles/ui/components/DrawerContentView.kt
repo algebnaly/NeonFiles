@@ -29,6 +29,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.algebnaly.neonfiles.ui.AppViewModelProvider
 import com.algebnaly.neonfiles.feature.browser.FileBrowserViewModel
 import com.algebnaly.neonfiles.ui.components.location.NewLocationButton
+import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
 
 @Composable
 fun DrawerContentView(
@@ -49,6 +50,26 @@ fun DrawerContentView(
     val uiState by drawerContentViewModel.uiState.collectAsState()
     ModalDrawerSheet(modifier = Modifier.width(containerWidthDp * 3 / 5)) {
         LazyColumn {
+            item {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable {
+                                // 点击直接打开本地根目录
+                                fileBrowserViewModel.open(getExternalRootPath())
+                                onCloseDrawer()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            fontSize = 5.em,
+                            text = "Home",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+            }
             items(uiState.locations) { location ->
                     Row {
                         Box (modifier = Modifier.weight(1f).combinedClickable(
