@@ -20,31 +20,40 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.algebnaly.neonfiles.core.model.StorageLocation
 import com.algebnaly.neonfiles.ui.AppViewModelProvider
 import com.algebnaly.neonfiles.feature.browser.FileBrowserViewModel
+import com.algebnaly.neonfiles.filesystem.StorageConfig
 import com.algebnaly.neonfiles.ui.components.location.NewLocationButton
 import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
 
 @Composable
 fun DrawerContentView(
+    onOpenLocation: (StorageLocation) -> Unit,
     onCloseDrawer: () -> Unit,
     onAddLocation: () -> Unit,
     onEditLocation: (Int) -> Unit,
     drawerContentViewModel: DrawerContentViewModel = viewModel(
         factory = AppViewModelProvider.Factory
     ),
-    fileBrowserViewModel: FileBrowserViewModel = viewModel(
-        factory = AppViewModelProvider.Factory
-    )
 ) {
     val windowInfo = LocalWindowInfo.current
     val density = LocalDensity.current
+
+    val homeLocation = remember {
+        StorageLocation(
+            name = "Home",
+            path = getExternalRootPath().toString(),
+            config = StorageConfig.Local,
+        )
+    }
 
     val containerWidthDp = with(density) { windowInfo.containerSize.width.toDp() }
     val uiState by drawerContentViewModel.uiState.collectAsState()
@@ -56,8 +65,7 @@ fun DrawerContentView(
                         modifier = Modifier
                             .weight(1f)
                             .clickable {
-                                // 点击直接打开本地根目录
-                                fileBrowserViewModel.open(getExternalRootPath())
+                                onOpenLocation(homeLocation)
                                 onCloseDrawer()
                             },
                         contentAlignment = Alignment.Center
@@ -74,7 +82,7 @@ fun DrawerContentView(
                     Row {
                         Box (modifier = Modifier.weight(1f).combinedClickable(
                             onClick = {
-                                fileBrowserViewModel.openLocation(location)
+                                onOpenLocation(location)
                                 onCloseDrawer()
                             },
                             onLongClick = {

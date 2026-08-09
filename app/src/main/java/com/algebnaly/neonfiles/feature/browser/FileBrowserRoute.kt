@@ -9,17 +9,27 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.algebnaly.neonfiles.core.model.StorageLocation
 import com.algebnaly.neonfiles.filesystem.utils.getExternalRootPath
 import com.algebnaly.neonfiles.platform.intent.openWithExternalApplication
 import com.algebnaly.neonfiles.ui.AppViewModelProvider
 import com.algebnaly.neonfiles.ui.FileBrowserAction
 import com.algebnaly.neonfiles.ui.FileBrowserEffect
+import kotlinx.coroutines.flow.Flow
 
 @Composable
 fun FileBrowserRoute(
     fileBrowserViewModel: FileBrowserViewModel = viewModel(factory = AppViewModelProvider.Factory),
-) {
+    openLocationEvents: Flow<StorageLocation>,
+    ) {
     val state by fileBrowserViewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(fileBrowserViewModel, openLocationEvents) {
+        fileBrowserViewModel.observeOpenLocationEvents(
+            openLocationEvents,
+        )
+    }
+
     val context = LocalContext.current
 
     LaunchedEffect(fileBrowserViewModel) {

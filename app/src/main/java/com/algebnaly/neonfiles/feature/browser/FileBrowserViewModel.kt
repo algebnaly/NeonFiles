@@ -13,6 +13,7 @@ import com.algebnaly.neonfiles.ui.PathViewState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -151,6 +152,14 @@ class FileBrowserViewModel(
                 }
                 _effects.emit(FileBrowserEffect.ShowMessage(e.message ?: e.toString()))
             }
+        }
+    }
+
+    suspend fun observeOpenLocationEvents(
+        events: Flow<StorageLocation>,
+    ) {
+        events.collect { location ->
+            openLocation(location)
         }
     }
 

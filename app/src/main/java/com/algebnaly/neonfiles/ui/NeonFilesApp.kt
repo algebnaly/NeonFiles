@@ -27,18 +27,23 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.algebnaly.neonfiles.NeonFilesApplication
 import com.algebnaly.neonfiles.R
+import com.algebnaly.neonfiles.core.model.StorageLocation
 import com.algebnaly.neonfiles.tasks.BackgroundFileOperationManagerInfo
 import com.algebnaly.neonfiles.tasks.OperationType
 import com.algebnaly.neonfiles.ui.components.DrawerContentView
 import com.algebnaly.neonfiles.feature.browser.FileBrowserRoute
 import com.algebnaly.neonfiles.feature.location.NFS4LocationRoute
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 @Composable
 fun NeonFilesNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController,
+    openLocationEvents: Flow<StorageLocation>,
 ) {
 
     NavHost(
@@ -47,7 +52,7 @@ fun NeonFilesNavHost(
         modifier = modifier
     ) {
         composable<Screen.FileBrowser> {
-            FileBrowserRoute()
+            FileBrowserRoute(openLocationEvents = openLocationEvents)
         }
         composable<Screen.NfsLocation> {
             NFS4LocationRoute(
@@ -81,13 +86,21 @@ fun NeonFilesTopAppBar(scope: CoroutineScope, drawerState: DrawerState) {
 @Composable
 fun NeonFilesApp(
 ) {
+
+    val openLocationChannel = remember {
+        Channel<StorageLocation>(capacity = Channel.BUFFERED)
+    }
+
+    val openLocationEvents = remember(openLocationChannel) {
+        openLocationChannel.receiveAsFlow()
+    }
+
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val navController = rememberNavController()
     val context = LocalContext.current
     val fileOperationManager = remember {
-        (context.applicationContext as NeonFilesApplication).container.
-        fileOperationManager
+        (context.applicationContext as NeonFilesApplication).container.fileOperationManager
     }
 
     val copyOperationName = stringResource(R.string.copy_operation_name)
@@ -106,6 +119,7 @@ fun NeonFilesApp(
                     }
                     "$opName ${message.message} $successName"
                 }
+
                 is BackgroundFileOperationManagerInfo.Err -> message.message
                 is BackgroundFileOperationManagerInfo.Cancel -> ""
             }
@@ -117,6 +131,9 @@ fun NeonFilesApp(
         drawerState = drawerState,
         drawerContent = {
             DrawerContentView(
+                onOpenLocation = { location ->
+                    openLocationChannel.trySend(location)
+                },
                 onAddLocation = {
                     navController.navigate(Screen.NfsLocation())
                 },
@@ -135,6 +152,7 @@ fun NeonFilesApp(
             NeonFilesNavHost(
                 modifier = Modifier.padding(paddingValues),
                 navController = navController,
+                openLocationEvents = openLocationEvents
             )
         }
     }
