@@ -8,6 +8,8 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
 import android.util.Log
+import com.algebnaly.neonfiles.BuildConfig
+import com.algebnaly.neonfiles.filesystem.utils.getMimeTypeWithDefault
 import com.algebnaly.neonfiles.filesystem.utils.toNIOPath
 import com.algebnaly.neonfiles.filesystem.utils.uriToPath
 import java.nio.ByteBuffer
@@ -16,7 +18,7 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 
-const val NeonFilesAuthority = "com.algebnaly.nfs4c.provider"
+val NeonFilesAuthority = "${BuildConfig.APPLICATION_ID}.provider"
 
 class NioContentProvider() : ContentProvider() {
     override fun delete(
@@ -30,8 +32,7 @@ class NioContentProvider() : ContentProvider() {
     override fun getType(uri: Uri): String? {
         return try {
             val fileName = uri.lastPathSegment ?: return "application/octet-stream"
-            val extension = android.webkit.MimeTypeMap.getFileExtensionFromUrl(fileName)
-            android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.lowercase()) ?: "application/octet-stream"
+            getMimeTypeWithDefault(fileName)
         } catch (e: Exception) {
             Log.d("neonFiles", e.toString())
             "application/octet-stream"
@@ -72,11 +73,15 @@ class NioContentProvider() : ContentProvider() {
             for (column in requestedProjection) {
                 when (column) {
                     OpenableColumns.DISPLAY_NAME -> {
-                        row.add(nioPath.fileName.toString())
+                        row.add(nioPath.fileName?.toString() ?: "")
                     }
 
                     OpenableColumns.SIZE -> {
                         row.add(attributes.size())
+                    }
+
+                    else -> {
+                        row.add(null)
                     }
                 }
             }

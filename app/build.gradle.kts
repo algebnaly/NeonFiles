@@ -71,11 +71,17 @@ android {
             )
         }
 
+        getByName("debug") {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-DEBUG"
+        }
+
         register("staging") {
             initWith(getByName("release"))
             isDebuggable = false
             isJniDebuggable = false
             isMinifyEnabled = false
+            applicationIdSuffix = ".staging"
             versionNameSuffix = "-STAGING"
             signingConfig = signingConfigs.getByName("debug")
         }
@@ -85,6 +91,7 @@ android {
             // Use the checked-in libraries from src/main/jniLibs instead of
             // rebuilding the native project, which may be temporarily broken.
             matchingFallbacks += listOf("release")
+            applicationIdSuffix = ".prebuilt"
             versionNameSuffix = "-PREBUILT"
             signingConfig = signingConfigs.getByName("debug")
         }
@@ -100,6 +107,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

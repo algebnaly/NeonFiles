@@ -14,8 +14,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,8 +59,7 @@ class FileBrowserViewModel(
     private var savedPath: Path? = null
     private var savedFileItems: List<PathViewState> = emptyList()
 
-    private val _refreshTrigger = MutableStateFlow(0);
-    val refreshTrigger = _refreshTrigger.asStateFlow()
+    private val loadDirectoryChannel = Channel<Path>(Channel.CONFLATED)
 
 
     private val _effects = MutableSharedFlow<FileBrowserEffect>()
@@ -71,25 +72,22 @@ class FileBrowserViewModel(
             }
         }
         viewModelScope.launch {
-            combine(
-                uiState.map { it.currentPath }.distinctUntilChanged(),
-                refreshTrigger
-            ) { path, _ ->
-                path
-            }.collectLatest { path ->
+            loadDirectoryChannel.receiveAsFlow().collectLatest { path ->
                 loadFileListSuspend(path)
             }
         }
+        loadDirectoryChannel.trySend(initialPath)
     }
 
     fun refresh() {
-        _refreshTrigger.update { it + 1 }
+        loadDirectoryChannel.trySend(_uiState.value.currentPath)
     }
 
     fun open(path: Path) {
         _uiState.update { state ->
             state.copy(currentPath = path)
         }
+        loadDirectoryChannel.trySend(path)
     }
 
     fun toggleSelection(path: Path) {
@@ -142,9 +140,7 @@ class FileBrowserViewModel(
             }
             try {
                 val path = storageConnector.connect(location)
-                _uiState.update { state ->
-                    state.copy(currentPath = path)
-                }
+                open(path)
             } catch (e: Exception) {
                 ensureActive()
                 _uiState.update { state ->

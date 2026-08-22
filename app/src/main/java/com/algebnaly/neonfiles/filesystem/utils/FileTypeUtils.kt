@@ -3,12 +3,10 @@ package com.algebnaly.neonfiles.filesystem.utils
 import android.webkit.MimeTypeMap
 
 fun getMimeType(filePath: String): String? {
-    val extension = MimeTypeMap.getFileExtensionFromUrl(filePath)
-    return if (extension != null) {
-        MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.lowercase())
-    } else {
-        null
-    }
+    val extension = filePath.substringAfterLast('.', "").lowercase()
+    if (extension.isEmpty()) return null
+    if (extension == "apk") return "application/vnd.android.package-archive"
+    return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
 }
 
 fun getMimeTypeWithDefault(filePath: String): String {
