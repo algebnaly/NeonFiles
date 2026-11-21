@@ -115,6 +115,15 @@ val nfscrsJniLibProjectPath = "../../../rust/nfscrs_jni/"
 val ndkPath: String = android.ndkDirectory.absolutePath
 
 androidComponents {
+    if (
+        System.getProperty("com.jetbrains.ls.imports.gradle") != null
+    ) {
+        beforeVariants(selector().all()) { variant ->
+            variant.enableUnitTest = false
+            variant.enableAndroidTest = false
+        }
+    }
+
     onVariants { variant ->
         if (variant.buildType in listOf("debug", "release", "staging")) {
             val taskName = "buildRustJni${variant.name.replaceFirstChar { it.uppercase() }}"

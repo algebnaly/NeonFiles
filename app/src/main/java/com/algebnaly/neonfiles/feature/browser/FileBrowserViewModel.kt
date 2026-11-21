@@ -34,7 +34,7 @@ import kotlin.collections.emptySet
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import java.text.Collator
-import kotlin.io.path.isDirectory
+import com.algebnaly.neonfiles.filesystem.utils.isDirectorySafe
 
 enum class OperationMode {
     Browser,
@@ -56,6 +56,7 @@ class FileBrowserViewModel(
     val uiState: StateFlow<FileBrowserUiState> = _uiState.asStateFlow()
 
     private var locationLoadJob: Job? = null
+	private var openJob: Job? = null
     private var savedPath: Path? = null
     private var savedFileItems: List<PathViewState> = emptyList()
 
@@ -212,13 +213,24 @@ class FileBrowserViewModel(
     fun onAction(action: FileBrowserAction) {
         when (action) {
             is FileBrowserAction.Open -> {
-                if (action.path.isDirectory()) {
-                    open(action.path)
-                } else {
-                    requestOpenExternal(
-                        path = action.path,
-                        mimeType = getMimeTypeWithDefault(action.path.fileName.toString()),
-                    )
+                openJob?.cancel()
+                openJob = viewModelScope.launch {
+                    try {
+                        val isDir = withContext(Dispatchers.IO) {
+                            action.path.isDirectorySafe()
+                        }
+                        if (isDir) {
+                            open(action.path)
+                        } else {
+                                        requestOpenExternal(
+                        			path = action.path,
+                        			mimeType = getMimeTypeWithDefault(action.path.fileName.toString()),
+                                        )
+                                    }
+                                } catch (e: Exception) {
+                                    ensureActive()
+                                    showMessage(e.message ?: e.toString())
+                                }
                 }
             }
 
